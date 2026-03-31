@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposal: Bite Me Protein Digital Commerce Strategy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sky-blue: #447bc7;
+            --bronze: #a67362;
+            --deep-slate: #1f2937;
+            --cream-bg: #fdfcfb;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: var(--deep-slate);
+            margin: 0;
+            padding: 0;
+        }
+        .anton { font-family: 'Anton', sans-serif; text-transform: uppercase; letter-spacing: 0.03em; }
+        
+        .document-wrapper {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 30px 45px;
+            background-color: var(--cream-bg);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            min-height: 100vh;
+        }
+        
+        .content-box {
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            box-shadow: 6px 6px 0px var(--sky-blue); 
+            padding: 24px;
+            margin-bottom: 1.8rem;
+            page-break-inside: avoid;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--sky-blue);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            border-bottom: 3px solid var(--bronze);
+            display: inline-block;
+            margin-bottom: 1.2rem;
+        }
+
+        .check-box {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--sky-blue);
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 12px;
+            background: white;
+        }
+
+        .price-badge {
+            background-color: var(--sky-blue);
+            color: white;
+            padding: 4px 14px;
+            font-family: 'Anton', sans-serif;
+            font-size: 1.2rem;
+        }
+
+        .service-list {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4b5563;
+        }
+
+        .service-list li {
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+        }
+
+        .service-list li::before {
+            content: "•";
+            color: var(--bronze);
+            font-weight: bold;
+            display: inline-block; 
+            width: 1.2em;
+            margin-left: 2px;
+        }
+
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 900;
+            display: inline-block;
+            background-color: #ecfdf5;
+            color: #059669;
+            border: 1px solid #10b981;
+        }
+
+        .print-btn {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            background: var(--sky-blue);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: 'Anton', sans-serif;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 5px 15px rgba(68, 123, 199, 0.4);
+            border: none;
+        }
+
+        @media print {
+            body { background-color: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .document-wrapper { padding: 0; width: 100%; box-shadow: none; }
+            .print-btn { display: none; }
+            @page { margin: 0.5in; }
+        }
+    </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">Download Proposal PDF</button>
+
+<div class="document-wrapper">
+    
+    <header class="flex justify-between items-end mb-12 border-b-8 border-[--sky-blue] pb-8">
+        <div>
+            <h1 class="anton text-7xl leading-none text-black">SWEET DREAMS US</h1>
+            <p class="text-[11px] uppercase tracking-[0.5em] font-extrabold text-[--bronze] mt-2">Unified E Commerce plus Square Integration</p>
+        </div>
+        <div class="text-right">
+            <p class="anton text-2xl text-[--sky-blue]">Bite Me Protein</p>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 italic">March 31 2026</p>
+        </div>
+    </header>
+
+    <p class="section-label">Finalized Assets</p>
+    <div class="content-box border-2 border-[--bronze] bg-amber-50/20">
+        <div class="flex justify-between items-center">
+            <div>
+                <h3 class="anton text-lg text-black">Professional Product Photography</h3>
+                <p class="text-[10px] font-bold text-gray-500 uppercase mt-1">High resolution library captured: edited: plus ready for launch</p>
+            </div>
+            <span class="status-pill">Asset Completed</span>
+        </div>
+    </div>
+
+    <p class="section-label">Path 1: Managed Storefront</p>
+    <div class="content-box">
+        <div class="flex items-center mb-4">
+            <div class="check-box"></div>
+            <h3 class="anton text-xl text-black">Managed Site</h3>
+        </div>
+        <ul class="service-list mb-6">
+            <li>Custom Designed Storefront syncing with Square POS</li>
+            <li>Real Time Inventory plus Pricing Updates via Square Catalog</li>
+            <li>Automatic Order Notifications and PCI Compliant Checkout</li>
+            <li>Management: Professional oversight of all text: banner: and event updates</li>
+        </ul>
+        <div class="grid grid-cols-2 gap-4 border-t pt-4">
+            <div>
+                <p class="text-[9px] font-bold uppercase text-gray-400">One Time Build</p>
+                <br>
+                <span class="price-badge">$1,000.00</span>
+            </div>
+            <div class="text-right">
+                <p class="text-[9px] font-bold uppercase text-[--sky-blue]">Monthly Hosting plus Management</p>
+                <p class="anton text-xl text-black">$30.00 Per Mo</p>
+            </div>
+        </div>
+    </div>
+
+    <p class="section-label">Path 2: Self Service Storefront</p>
+    <div class="content-box border-2 border-[--sky-blue]">
+        <div class="flex items-center mb-4">
+            <div class="check-box"></div>
+            <h3 class="anton text-xl text-black">Self Service</h3>
+        </div>
+        <ul class="service-list mb-6">
+            <li>Everything in Path 1 plus a Private Admin Dashboard</li>
+            <li>Independence: Update your own Hero Banners: events: and announcements</li>
+            <li>Product Enrichment: Add ingredients: "New!" badges: plus nutrition info</li>
+            <li>Internal Sales Analytics: View sales trends plus top sellers in your dashboard</li>
+        </ul>
+        <div class="grid grid-cols-2 gap-4 border-t pt-4">
+            <div>
+                <p class="text-[9px] font-bold uppercase text-gray-400">One Time Build</p>
+                <br>
+                <span class="price-badge">$1,700.00</span>
+            </div>
+            <div class="text-right">
+                <p class="text-[9px] font-bold uppercase text-[--sky-blue]">Premium Hosting plus Support</p>
+                <p class="anton text-xl text-black">$40.00 Per Mo</p>
+                <p class="text-[8px] font-bold text-gray-400 uppercase">Includes 2 hours of guaranteed monthly support</p>
+            </div>
+        </div>
+    </div>
+
+    <p class="section-label">Maintenance plus Extra Support</p>
+    <div class="content-box shadow-none border-2 border-dashed py-4">
+        <div class="flex justify-between items-center">
+            <div>
+                <h3 class="anton text-md text-black">General Maintenance Hourly Rate</h3>
+                <p class="text-[10px] font-bold text-gray-400 uppercase mt-1">Applied to site changes: new features: or structural edits beyond base monthly plan</p>
+            </div>
+            <p class="anton text-2xl text-[--bronze]">$80.00 Per Hour</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-12 mt-6">
+        <div>
+            <div class="h-[45px] border-b-2 border-[--bronze] mb-2"></div>
+            <p class="anton text-sm text-black">Bite Me Protein Authorization</p>
+            <p class="text-[10px] uppercase font-bold text-gray-400">Date</p>
+        </div>
+        <div>
+            <div class="h-[45px] border-b-2 border-[--bronze] mb-2"></div>
+            <p class="anton text-sm text-black">Sweet Dreams US Signature</p>
+            <p class="text-[10px] uppercase font-bold text-gray-400">Date</p>
+        </div>
+    </div>
+
+    <footer class="mt-auto pt-8 border-t-2 border-[--sky-blue] flex justify-between items-center">
+        <div class="text-[10px] uppercase font-bold text-gray-400 tracking-widest italic leading-relaxed">
+            Replace the Employee Deploy the Team.
+        </div>
+        <div class="text-right">
+            <p class="anton text-3xl leading-none text-black">Sweet Dreams US</p>
+        </div>
+    </footer>
+
+</div>
+
+</body>
+</html>

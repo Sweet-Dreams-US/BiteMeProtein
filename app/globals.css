@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ===== BITE ME PROTEIN BAKERY — Design System ===== */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Color Palette: Dark + Cream + Subtle Pink */
+  --color-dark: #1a1a1a;
+  --color-dark-light: #2a2a2a;
+  --color-dark-lighter: #3a3a3a;
+  --color-cream: #F5F0EB;
+  --color-cream-dark: #E8E0D8;
+  --color-cream-darker: #D4C9BE;
+  --color-pink: #E8A0BF;
+  --color-pink-light: #F0C0D4;
+  --color-pink-dark: #D4809A;
+  --color-charcoal: #2D2D2D;
+
+  /* Semantic Colors */
+  --color-background: #1a1a1a;
+  --color-foreground: #F5F0EB;
+  --color-surface: #2a2a2a;
+  --color-surface-light: #3a3a3a;
+  --color-accent: #E8A0BF;
+  --color-muted: #8a8a8a;
+
+  /* Typography */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-editorial);
+
+  /* Spacing for editorial layout */
+  --spacing-section: 8rem;
+  --spacing-section-sm: 5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Base styles */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Editorial heading style */
+.heading-editorial {
+  font-family: var(--font-heading), Georgia, serif;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* Fluid type scale */
+.text-display {
+  font-size: clamp(3rem, 8vw, 6rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.text-hero {
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.text-section {
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.text-body-lg {
+  font-size: clamp(1.125rem, 2vw, 1.375rem);
+  line-height: 1.6;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--color-pink);
+  color: var(--color-dark);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

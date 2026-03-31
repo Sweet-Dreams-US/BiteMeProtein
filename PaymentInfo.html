@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remittance: Bite Me Protein Option B Deposit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sky-blue: #447bc7;
+            --bronze: #a67362;
+            --deep-slate: #1f2937;
+            --cream-bg: #fdfcfb;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: var(--deep-slate);
+            margin: 0;
+            padding: 0;
+        }
+        .anton { font-family: 'Anton', sans-serif; text-transform: uppercase; letter-spacing: 0.03em; }
+        
+        .document-wrapper {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px 50px;
+            background-color: var(--cream-bg);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            min-height: 100vh;
+        }
+        
+        .content-box {
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            box-shadow: 6px 6px 0px var(--sky-blue); 
+            padding: 24px;
+            margin-bottom: 1.8rem;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--sky-blue);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            border-bottom: 3px solid var(--bronze);
+            display: inline-block;
+            margin-bottom: 1.2rem;
+        }
+
+        .price-badge {
+            background-color: var(--sky-blue);
+            color: white;
+            padding: 6px 18px;
+            font-family: 'Anton', sans-serif;
+            font-size: 1.5rem;
+        }
+
+        .method-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.2rem;
+            color: var(--deep-slate);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #f3f4f6;
+            padding: 10px 0;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .print-btn {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            background: var(--sky-blue);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: 'Anton', sans-serif;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 5px 15px rgba(68, 123, 199, 0.4);
+            border: none;
+        }
+
+        @media print {
+            body { background-color: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .document-wrapper { padding: 0; width: 100%; box-shadow: none; }
+            .print-btn { display: none; }
+            @page { margin: 0.5in; }
+        }
+    </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">Download Final Remittance</button>
+
+<div class="document-wrapper">
+    
+    <header class="flex justify-between items-end mb-12 border-b-8 border-[--sky-blue] pb-8">
+        <div>
+            <h1 class="anton text-7xl leading-none text-black">SWEET DREAMS US</h1>
+            <p class="text-[11px] uppercase tracking-[0.5em] font-extrabold text-[--bronze] mt-2">Project Deposit plus Remittance Details</p>
+        </div>
+        <div class="text-right">
+            <p class="anton text-2xl text-[--sky-blue]">Bite Me Protein</p>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 italic">Confirmed: March 31 2026</p>
+        </div>
+    </header>
+
+    <p class="section-label">Selected Engagement: Option B</p>
+    <div class="content-box border-2 border-[--sky-blue]">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h3 class="anton text-2xl mb-1">Self Service Storefront</h3>
+                <p class="text-[10px] font-bold text-gray-500 uppercase">Square API Integration plus Full Admin Control</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[9px] font-bold uppercase text-gray-400 mb-1">Total Project Value</p>
+                <p class="anton text-xl">$1,700.00</p>
+            </div>
+        </div>
+        <div class="border-t pt-6 flex justify-between items-center">
+            <div>
+                <p class="anton text-lg text-[--sky-blue]">Initial Deposit Due</p>
+                <p class="text-[9px] font-bold uppercase text-gray-400">50 percent of total investment</p>
+            </div>
+            <span class="price-badge">$850.00</span>
+        </div>
+    </div>
+
+    <p class="section-label">Remittance Instructions</p>
+    
+    <div class="content-box">
+        <span class="method-title">Electronic Transfer (ACH plus Wire)</span>
+        <div class="info-row"><span>Beneficiary</span><span>Sweet Dreams Music LLC</span></div>
+        <div class="info-row"><span>Bank Name</span><span>Star Financial Bank</span></div>
+        <div class="info-row"><span>Routing Number</span><span>074901672</span></div>
+        <div class="info-row" style="border:none;"><span>Account Number</span><span class="text-[--sky-blue] font-black">51084303</span></div>
+    </div>
+
+    <div class="content-box">
+        <span class="method-title">Corporate Check Remittance</span>
+        <div class="info-row"><span>Payable To</span><span>Sweet Dreams Music LLC</span></div>
+        <div class="info-row"><span>Attention</span><span class="text-[--bronze] font-black">Website Development</span></div>
+        <div class="info-row" style="border:none;"><span>Mailing Address</span><span>3943 Parnell Ave. Fort Wayne IN 46805</span></div>
+    </div>
+
+    <p class="section-label">Payment Terms</p>
+    <div class="content-box bg-gray-50 border-none shadow-none py-6">
+        <ul class="text-[10px] font-bold uppercase text-gray-500 space-y-2">
+            <li>• Development phase begins immediately upon receipt of the **$850.00** deposit</li>
+            <li>• Final balance of **$850.00** is due upon project completion plus handoff</li>
+            <li>• Completion is defined as successful Square API sync plus functional live checkout</li>
+            <li>• All source code plus website ownership is transferred to client upon final payment</li>
+        </ul>
+    </div>
+
+    <footer class="mt-auto pt-8 border-t-2 border-[--sky-blue] flex justify-between items-center">
+        <div class="text-[10px] uppercase font-bold text-gray-400 tracking-widest italic">
+            FEIN 883609033 plus Supporting the Digital Growth of Bite Me Protein.
+        </div>
+        <div class="text-right">
+            <p class="anton text-3xl leading-none text-black">Sweet Dreams US</p>
+        </div>
+    </footer>
+
+</div>
+
+</body>
+</html>
