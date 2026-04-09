@@ -1,65 +1,392 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import ScrollReveal from "@/components/animations/ScrollReveal";
+import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
+import Marquee from "@/components/animations/Marquee";
+import ScrollVideo from "@/components/animations/ScrollVideo";
+import { images } from "@/lib/images";
+import { brand } from "@/lib/brand";
+import { supabase } from "@/lib/supabase";
+
+
+const HERO_VIDEO = "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/productPhotos/hf_20260404_191224_52bb54af-2a44-49e9-8306-d6e9c97e3d1f.mp4";
+
+interface HeroContent {
+  headline: string;
+  subtext: string;
+  cta_primary: string;
+  cta_secondary: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  variations: { id: string; name: string; priceMoney: { amount: number } | null }[];
+}
+
+const testimonials = [
+  "Best protein dessert I've ever had.",
+  "I don't even like protein bars anymore.",
+  "This should be illegal.",
+  "My gym bag essential.",
+  "Tastes like actual dessert.",
+  "I'm never going back to chalky bars.",
+  "My post-workout obsession.",
+  "Where has this been all my life?",
+];
+
+const productImageMap: Record<string, string> = {
+  "Protein Brownies": images.brownieHearts[0],
+  "Blueberry Protein Muffin": images.blueberryMuffin[0],
+  "Chocolate Chip Protein Banana Bread Bites": images.chocChipBananaBread[0],
+  "Raspberry Chocolate Chip Protein Banana Bread Bites": images.rasChocChipBananaBread[0],
+  "Protein Vegan Cookie Dough Truffles": images.chocolateTruffles[0],
+};
+
+function HeroTitle() {
+  const [opacity, setOpacity] = useState(1);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const scrollY = window.scrollY;
+      const fadeEnd = window.innerHeight * 0.4;
+      setOpacity(Math.max(0, 1 - scrollY / fadeEnd));
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none"
+      style={{ opacity }}
+    >
+      <h1
+        className="font-fun text-white text-5xl md:text-7xl lg:text-8xl text-center px-6 select-none"
+        style={{ textShadow: "0 4px 30px rgba(0,0,0,0.4), 0 2px 10px rgba(0,0,0,0.3)" }}
+      >
+        Bite Me
+      </h1>
+    </div>
+  );
+}
 
 export default function Home() {
+  const [hero, setHero] = useState<HeroContent>({
+    headline: "Let Me Be Your Protein Treat Dealer",
+    subtext: "Soft, fresh, high-protein treats that actually taste like dessert. Not your average protein snack.",
+    cta_primary: "Shop Now",
+    cta_secondary: "Take the Quiz",
+  });
+  const [bestSellers, setBestSellers] = useState<Product[]>([]);
+
+  const fetchData = useCallback(async () => {
+    const { data: heroData } = await supabase
+      .from("site_content")
+      .select("content")
+      .eq("section", "hero")
+      .single();
+    if (heroData?.content) setHero(heroData.content as unknown as HeroContent);
+
+    try {
+      const res = await fetch("/api/square/catalog");
+      const data = await res.json();
+      if (data.items) {
+        const withImages = data.items.filter((p: Product) => productImageMap[p.name]);
+        setBestSellers(withImages.slice(0, 4));
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      {/* ===== HERO — SCROLL VIDEO ===== */}
+      <ScrollVideo src={HERO_VIDEO} poster={images.allProducts2} className="relative" style={{ height: "300vh" }}>
+        {/* Minimal bottom fade */}
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-cream to-transparent pointer-events-none z-10" />
+
+        {/* Center title — fades out as you scroll */}
+        <HeroTitle />
+
+        {/* Bottom bar — brand name left, tagline right, CTAs below */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-6 lg:px-8 pb-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-end justify-between mb-6">
+              <ScrollReveal>
+                <p className="font-fun text-burgundy text-3xl md:text-4xl font-bold drop-shadow-sm mb-16">
+                  Bite Me Protein Bakery
+                </p>
+              </ScrollReveal>
+              <ScrollReveal delay={0.1}>
+                <p className="text-dark/70 text-sm md:text-base font-medium max-w-sm text-right hidden md:block mb-16">
+                  {hero.subtext}
+                </p>
+              </ScrollReveal>
+            </div>
+            <ScrollReveal delay={0.2}>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/shop" className="btn-primary">{hero.cta_primary}</Link>
+                <Link href="/quiz" className="btn-secondary">{hero.cta_secondary}</Link>
+              </div>
+            </ScrollReveal>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 animate-bounce-gentle z-20">
+          <span className="text-dark/25 text-[10px] uppercase tracking-[0.3em] font-semibold">Scroll</span>
         </div>
-      </main>
-    </div>
+      </ScrollVideo>
+
+      {/* ===== SOCIAL PROOF MARQUEE ===== */}
+      <section className="py-10 bg-burgundy overflow-hidden">
+        <Marquee speed={30} className="py-2">
+          {testimonials.map((quote, i) => (
+            <span key={i} className="text-xl md:text-3xl font-bold text-white/90 font-display mx-8 shrink-0 italic">
+              &ldquo;{quote}&rdquo;
+            </span>
+          ))}
+        </Marquee>
+      </section>
+
+      {/* ===== BEST SELLERS ===== */}
+      <section className="py-24 md:py-32 bg-cream">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <p className="stamp text-burgundy mb-6">Best Sellers</p>
+              <h2 className="text-section font-fun text-burgundy">
+                Your new <AnimatedSquiggly>addiction.</AnimatedSquiggly>
+              </h2>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {bestSellers.map((product, i) => (
+              <ScrollReveal key={product.id} delay={i * 0.1}>
+                <Link href={`/shop#product-${product.id}`} className="card-bakery overflow-hidden group block">
+                  <div className="aspect-video overflow-hidden relative">
+                    {productImageMap[product.name] ? (
+                      <Image
+                        src={productImageMap[product.name]}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-warm" />
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <h3 className="text-dark font-bold group-hover:text-burgundy transition-colors text-base">
+                      {product.name}
+                    </h3>
+                    <p className="text-gray text-sm mt-1 line-clamp-1">{product.description}</p>
+                    <span className="inline-block text-burgundy text-sm font-bold mt-3 group-hover:translate-x-1 transition-transform">
+                      View →
+                    </span>
+                  </div>
+                </Link>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== BRAND BREAK — Girl Logo ===== */}
+      <section className="py-20 md:py-28 bg-gradient-warm relative overflow-hidden">
+        <div className="absolute top-10 right-16 w-20 h-20 rounded-full bg-salmon/15 animate-float" />
+        <div className="absolute bottom-10 left-12 w-14 h-14 rounded-full bg-golden/20 animate-float-reverse" />
+
+        <div className="relative max-w-4xl mx-auto px-6 lg:px-8 flex flex-col items-center text-center">
+          <ScrollReveal>
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            >
+              <Image
+                src={brand.squareLogo}
+                alt="Bite Me girl icon"
+                width={140}
+                height={140}
+                className="rounded-3xl shadow-lg mb-8"
+              />
+            </motion.div>
+          </ScrollReveal>
+          <ScrollReveal delay={0.1}>
+            <p className="font-fun text-burgundy text-4xl md:text-6xl">
+              Dessert... but make it protein.
+            </p>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ===== COMPARISON TEASER ===== */}
+      <section className="py-24 md:py-32 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <ScrollReveal>
+              <p className="stamp text-burgundy mb-6">The Difference</p>
+              <h2 className="text-section font-display text-dark mb-6">
+                Your protein bar <AnimatedSquiggly>could never.</AnimatedSquiggly>
+              </h2>
+              <p className="text-body-lg text-gray mb-8">
+                Stop settling for chalky, processed protein bars when you could be eating a brownie with 18g of protein.
+              </p>
+              <Link href="/compare" className="btn-primary">
+                See the Breakdown →
+              </Link>
+            </ScrollReveal>
+
+            <ScrollReveal delay={0.2}>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="card-bakery p-6">
+                  <p className="text-gray text-xs uppercase tracking-widest font-bold mb-4">Typical Bar</p>
+                  <div className="space-y-3">
+                    {[["Taste", 25], ["Ingredients", 33], ["Freshness", 20]].map(([label, width]) => (
+                      <div key={label as string}>
+                        <p className="text-gray text-xs mb-1">{label as string}</p>
+                        <div className="h-2.5 bg-cream rounded-full">
+                          <div className="h-full bg-gray-light/50 rounded-full" style={{ width: `${width}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="card-bakery p-6 border-2 !border-burgundy/20">
+                  <p className="text-burgundy text-xs uppercase tracking-widest font-bold mb-4">Bite Me ✨</p>
+                  <div className="space-y-3">
+                    {[["Taste", 100], ["Ingredients", 90], ["Freshness", 100]].map(([label, width]) => (
+                      <div key={label as string}>
+                        <p className="text-dark text-xs mb-1">{label as string}</p>
+                        <div className="h-2.5 bg-cream rounded-full">
+                          <div className="h-full bg-gradient-to-r from-burgundy to-salmon rounded-full" style={{ width: `${width}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== BRAND SECTION ===== */}
+      <section className="py-24 md:py-32 bg-gradient-warm relative overflow-hidden">
+        {/* Floating decorative elements */}
+        <div className="absolute top-10 right-10 w-20 h-20 rounded-full bg-salmon/20 animate-float" />
+        <div className="absolute bottom-20 left-10 w-16 h-16 rounded-full bg-golden/30 animate-float-reverse" />
+        <div className="absolute top-1/2 right-1/4 w-12 h-12 rounded-full bg-burgundy/10 animate-float-slow" />
+
+        <div className="relative max-w-4xl mx-auto px-6 lg:px-8 text-center">
+          <ScrollReveal>
+            <h2 className="font-fun text-burgundy text-hero mb-8">
+              This isn&apos;t a protein bar.
+              <br />
+              <span className="text-salmon">It&apos;s a glow up.</span>
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={0.1}>
+            <p className="text-body-lg text-dark/60 max-w-2xl mx-auto">
+              We don&apos;t do dry, chalky, or fake. Just real ingredients, high protein,
+              and desserts you actually crave. All gluten-free. All low sugar. All no nuts.
+            </p>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ===== LIFESTYLE PHOTO GRID ===== */}
+      <section className="py-4 bg-cream">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-4">
+            <ScrollReveal className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
+              <Image src={images.lifestyle.blueberryMuffinPurple[0]} alt="Blueberry muffin" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+            </ScrollReveal>
+            <ScrollReveal delay={0.1} className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
+              <Image src={images.lifestyle.chocChipHeartBrownies} alt="Heart brownies" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+            </ScrollReveal>
+            <ScrollReveal delay={0.2} className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
+              <Image src={images.lifestyle.chocChipRaspberryRed[0]} alt="Raspberry banana bread" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+            </ScrollReveal>
+            <ScrollReveal delay={0.3} className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
+              <Image src={images.lifestyle.chocTrufflesRed} alt="Chocolate truffles" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== VIRAL CALLOUT ===== */}
+      <section className="py-20 bg-burgundy">
+        <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+          <ScrollReveal>
+            <p className="font-fun text-white text-hero">
+              Be honest&hellip; are you eating it because you like it&hellip;
+              <span className="text-golden"> or because you feel like you have to?</span>
+            </p>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ===== TRAINER PARTNERSHIP ===== */}
+      <section className="py-24 md:py-32 bg-cream">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="card-bakery overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              <div className="p-12 md:p-16">
+                <ScrollReveal>
+                  <p className="stamp text-burgundy mb-6">Partner With Us</p>
+                  <h2 className="text-section font-display text-dark mb-4">
+                    For trainers, gyms & studios
+                  </h2>
+                  <p className="text-body-lg text-gray mb-8">
+                    Bulk ordering, exclusive pricing, and your clients will actually love it.
+                  </p>
+                  <Link href="/trainers" className="btn-primary">
+                    Partner With Us
+                  </Link>
+                </ScrollReveal>
+              </div>
+              <div className="relative h-64 lg:h-auto">
+                <Image src={images.allProducts5} alt="Products" fill className="object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/30 to-transparent lg:block hidden" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== FINAL CTA ===== */}
+      <section className="py-24 md:py-32 bg-gradient-warm relative overflow-hidden">
+        <div className="absolute top-10 left-20 w-24 h-24 rounded-full bg-salmon/20 animate-float" />
+        <div className="absolute bottom-10 right-20 w-16 h-16 rounded-full bg-golden/30 animate-float-reverse" />
+
+        <div className="relative max-w-4xl mx-auto px-6 lg:px-8 text-center">
+          <ScrollReveal>
+            <h2 className="font-fun text-burgundy text-display mb-6">
+              Upgrade your snacks.
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={0.1}>
+            <p className="text-body-lg text-dark/60 mb-10">
+              Life&apos;s too short for bad protein bars.
+            </p>
+          </ScrollReveal>
+          <ScrollReveal delay={0.2}>
+            <Link href="/shop" className="btn-primary text-lg px-10 py-4">
+              Shop Now
+            </Link>
+          </ScrollReveal>
+        </div>
+      </section>
+    </>
   );
 }

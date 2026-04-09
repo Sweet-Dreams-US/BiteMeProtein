@@ -1,39 +1,48 @@
 @import "tailwindcss";
 
-/* ===== BITE ME PROTEIN BAKERY — Design System ===== */
+/* ===== BITE ME PROTEIN BAKERY — Warm Bakery Design System ===== */
 
 @theme inline {
-  /* Color Palette: Dark + Cream + Subtle Pink */
-  --color-dark: #1a1a1a;
-  --color-dark-light: #2a2a2a;
-  --color-dark-lighter: #3a3a3a;
-  --color-cream: #F5F0EB;
-  --color-cream-dark: #E8E0D8;
-  --color-cream-darker: #D4C9BE;
-  --color-pink: #E8A0BF;
-  --color-pink-light: #F0C0D4;
-  --color-pink-dark: #D4809A;
-  --color-charcoal: #2D2D2D;
+  /* Brand Colors from logo + provided palette */
+  --color-burgundy: #843430;
+  --color-burgundy-dark: #6B2A27;
+  --color-burgundy-light: #9E4440;
+  --color-red: #B20D30;
+  --color-red-light: #D4253F;
+  --color-salmon: #FF9A8B;
+  --color-salmon-light: #FFB8AE;
+  --color-golden: #f2d795;
+  --color-golden-light: #F7E4B3;
+  --color-golden-dark: #D4B76A;
+  --color-green: #3F784C;
+  --color-green-light: #5A9B68;
+  --color-blue: #3F84E5;
+  --color-gray: #70706e;
+  --color-gray-light: #9a9a98;
 
-  /* Semantic Colors */
-  --color-background: #1a1a1a;
-  --color-foreground: #F5F0EB;
-  --color-surface: #2a2a2a;
-  --color-surface-light: #3a3a3a;
-  --color-accent: #E8A0BF;
-  --color-muted: #8a8a8a;
+  /* Surfaces */
+  --color-cream: #FFF9F0;
+  --color-cream-dark: #F5EDE0;
+  --color-warm-white: #FFFCF7;
+  --color-warm-bg: #FEF7ED;
+  --color-dark: #2D2019;
+  --color-dark-light: #3D3028;
+
+  /* Semantic */
+  --color-background: #FFF9F0;
+  --color-foreground: #2D2019;
+  --color-surface: #FFFFFF;
+  --color-surface-warm: #FEF7ED;
+  --color-accent: #843430;
+  --color-muted: #70706e;
 
   /* Typography */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-editorial);
-
-  /* Spacing for editorial layout */
-  --spacing-section: 8rem;
-  --spacing-section-sm: 5rem;
+  --font-sans: var(--font-body);
+  --font-display: var(--font-heading-display);
+  --font-fun: var(--font-love-ya);
 }
 
-/* Base styles */
+/* Base */
 body {
   background: var(--color-background);
   color: var(--color-foreground);
@@ -42,30 +51,32 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Editorial heading style */
-.heading-editorial {
-  font-family: var(--font-heading), Georgia, serif;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+/* ===== TYPOGRAPHY ===== */
+
+.font-fun {
+  font-family: var(--font-love-ya), cursive;
 }
 
-/* Fluid type scale */
+.font-display {
+  font-family: var(--font-heading-display), Georgia, serif;
+}
+
 .text-display {
-  font-size: clamp(3rem, 8vw, 6rem);
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  font-size: clamp(3rem, 8vw, 7rem);
+  line-height: 1.0;
+  letter-spacing: -0.02em;
 }
 
 .text-hero {
-  font-size: clamp(2.25rem, 5vw, 4rem);
-  line-height: 1.1;
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  line-height: 1.05;
   letter-spacing: -0.02em;
 }
 
 .text-section {
-  font-size: clamp(1.75rem, 4vw, 3rem);
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  font-size: clamp(1.75rem, 4vw, 3.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
 .text-body-lg {
@@ -73,9 +84,178 @@ body {
   line-height: 1.6;
 }
 
-/* Selection color */
+/* ===== BAKERY CARD STYLES ===== */
+
+.card-bakery {
+  background: white;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(45, 32, 25, 0.06);
+  box-shadow: 0 4px 24px rgba(132, 52, 48, 0.04);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-bakery:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(132, 52, 48, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* ===== BUTTON STYLES ===== */
+
+.btn-primary {
+  background: var(--color-burgundy);
+  color: white;
+  padding: 1rem 2.25rem;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary:hover {
+  background: var(--color-burgundy-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(132, 52, 48, 0.25);
+}
+
+.btn-secondary {
+  border: 2px solid var(--color-burgundy);
+  color: var(--color-burgundy);
+  padding: 0.9375rem 2.25rem;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-secondary:hover {
+  background: var(--color-burgundy);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.btn-fun {
+  background: var(--color-salmon);
+  color: var(--color-dark);
+  padding: 1rem 2.25rem;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-fun:hover {
+  background: var(--color-salmon-light);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(255, 154, 139, 0.3);
+}
+
+/* ===== GRADIENT BACKGROUNDS ===== */
+
+.bg-gradient-warm {
+  background: linear-gradient(135deg, var(--color-cream) 0%, var(--color-golden-light) 50%, var(--color-salmon-light) 100%);
+}
+
+.bg-gradient-sunset {
+  background: linear-gradient(135deg, #FF9A8B 0%, #FF6A88 55%, #FF99AC 100%);
+}
+
+.bg-gradient-bakery {
+  background: linear-gradient(180deg, var(--color-warm-bg) 0%, var(--color-cream) 100%);
+}
+
+.bg-gradient-hero {
+  background: linear-gradient(135deg, var(--color-golden-light) 0%, var(--color-salmon-light) 40%, var(--color-cream) 100%);
+}
+
+/* ===== DECORATIVE ===== */
+
+/* Floating animation for decorative elements */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(3deg); }
+}
+
+@keyframes float-reverse {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(15px) rotate(-3deg); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes pulse-warm {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(132, 52, 48, 0.2); }
+  50% { box-shadow: 0 0 0 12px rgba(132, 52, 48, 0); }
+}
+
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float-reverse { animation: float-reverse 7s ease-in-out infinite; }
+.animate-float-slow { animation: float 8s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 20s linear infinite; }
+.animate-bounce-gentle { animation: bounce-gentle 2s ease-in-out infinite; }
+.animate-wiggle { animation: wiggle 3s ease-in-out infinite; }
+.animate-shimmer { animation: shimmer 3s ease-in-out infinite; }
+.animate-pulse-warm { animation: pulse-warm 2s ease-in-out infinite; }
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-700 { animation-delay: 700ms; }
+.delay-1000 { animation-delay: 1000ms; }
+
+/* ===== BAKERY SPECIFIC ===== */
+
+/* Stamp / badge look */
+.stamp {
+  border: 3px solid var(--color-burgundy);
+  border-radius: 100px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  transform: rotate(-3deg);
+  display: inline-block;
+}
+
+/* Squiggly underline */
+.squiggly {
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: var(--color-salmon);
+  text-underline-offset: 6px;
+}
+
+/* Selection */
 ::selection {
-  background-color: var(--color-pink);
+  background-color: var(--color-salmon);
   color: var(--color-dark);
 }
 
@@ -84,15 +264,18 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Scrollbar */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Line clamp */
+.line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
