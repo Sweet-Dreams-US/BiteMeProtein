@@ -537,11 +537,11 @@ function ShopContent() {
                     Coming Soon
                   </div>
                   <span className="text-5xl mb-4 block">🧒</span>
-                  <h2 className="font-fun text-burgundy text-3xl md:text-4xl mb-3">Bite Me Kids</h2>
+                  <h2 className="font-fun text-burgundy text-3xl md:text-4xl mb-3">Mini Bites for Kids</h2>
                   <p className="text-dark/50 text-lg mb-4 max-w-lg mx-auto">
-                    Protein-packed treats made just for little ones. Same real ingredients, same great taste — sized and sweetened for kids.
+                    Kid-friendly protein treats are on the way. Same real ingredients, same great taste — perfectly portioned for your little ones.
                   </p>
-                  <p className="text-burgundy font-bold text-sm">For the tiny snackers in your life.</p>
+                  <p className="text-burgundy font-bold text-sm">Snacks they&apos;ll actually ask for.</p>
                 </div>
               </ScrollReveal>
             </div>
