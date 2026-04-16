@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, ReactNode, useCallback } from "react";
+import { useEffect, useRef, useState, ReactNode } from "react";
 
 interface ScrollVideoProps {
   src: string;
@@ -15,55 +15,48 @@ export default function ScrollVideo({ src, className = "", style, children }: Sc
   const sectionRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const rafRef = useRef<number>(0);
-  const currentTimeRef = useRef<number>(0);
-  const targetTimeRef = useRef<number>(0);
 
-  // Smooth interpolation for scroll-linked playback
-  const lerp = useCallback((current: number, target: number, factor: number) => {
-    return current + (target - current) * factor;
-  }, []);
-
-  // Load video
+  // Load video — retry on mobile
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const onCanPlay = () => {
-      setLoaded(true);
-      // Seek to frame 0 so the first frame shows immediately
-      video.currentTime = 0;
+    const onLoaded = () => setLoaded(true);
+    const onError = () => {
+      // Retry once on error (mobile often fails first attempt)
+      setTimeout(() => {
+        video.load();
+      }, 1000);
+    };
+    const onStalled = () => {
+      // If stalled, try triggering play then pause to force buffer
+      video.play().then(() => video.pause()).catch(() => {});
     };
 
-    video.addEventListener("canplay", onCanPlay);
-    video.addEventListener("loadeddata", onCanPlay);
+    video.addEventListener("loadeddata", onLoaded);
+    video.addEventListener("error", onError);
+    video.addEventListener("stalled", onStalled);
 
     // If already loaded (cached)
-    if (video.readyState >= 3) {
-      setLoaded(true);
-      video.currentTime = 0;
-    }
+    if (video.readyState >= 2) setLoaded(true);
 
-    // Force load
-    video.load();
-
-    // Force buffer on mobile — play/pause trick
+    // Force load on mobile — touch to trigger
     const touchLoad = () => {
       if (!loaded) {
-        video.play().then(() => {
-          video.pause();
-          video.currentTime = 0;
-        }).catch(() => {});
+        video.load();
+        video.play().then(() => video.pause()).catch(() => {});
       }
     };
     document.addEventListener("touchstart", touchLoad, { once: true });
 
     return () => {
-      video.removeEventListener("canplay", onCanPlay);
-      video.removeEventListener("loadeddata", onCanPlay);
+      video.removeEventListener("loadeddata", onLoaded);
+      video.removeEventListener("error", onError);
+      video.removeEventListener("stalled", onStalled);
     };
   }, [loaded]);
 
-  // Scroll-linked playback with smooth interpolation
+  // Scroll-linked playback
   useEffect(() => {
     const video = videoRef.current;
     const section = sectionRef.current;
@@ -72,41 +65,27 @@ export default function ScrollVideo({ src, className = "", style, children }: Sc
     const update = () => {
       const rect = section.getBoundingClientRect();
       const scrollable = rect.height - window.innerHeight;
-      if (scrollable <= 0) {
-        rafRef.current = requestAnimationFrame(update);
-        return;
-      }
+      if (scrollable <= 0) return;
 
       const scrolled = -rect.top;
       const progress = Math.max(0, Math.min(1, scrolled / scrollable));
-      targetTimeRef.current = progress * video.duration;
+      const target = progress * video.duration;
 
-      // Smooth lerp toward target (0.12 = smoothing factor)
-      currentTimeRef.current = lerp(
-        currentTimeRef.current,
-        targetTimeRef.current,
-        0.12
-      );
-
-      // Only update if meaningful difference (reduces jank)
-      if (Math.abs(video.currentTime - currentTimeRef.current) > 0.01) {
-        video.currentTime = currentTimeRef.current;
+      if (Math.abs(video.currentTime - target) > 0.02) {
+        video.currentTime = target;
       }
 
       rafRef.current = requestAnimationFrame(update);
     };
 
-    // Initialize
-    currentTimeRef.current = 0;
-    targetTimeRef.current = 0;
     rafRef.current = requestAnimationFrame(update);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [loaded, lerp]);
+  }, [loaded]);
 
   return (
     <div ref={sectionRef} className={className} style={style}>
       <div className="sticky top-0 h-screen w-full overflow-hidden">
-        {/* The video — always visible, first frame shows immediately */}
+        {/* The video — no poster attribute, no Image fallback */}
         <video
           ref={videoRef}
           src={src}
@@ -114,11 +93,12 @@ export default function ScrollVideo({ src, className = "", style, children }: Sc
           playsInline
           preload="auto"
           className="absolute inset-0 w-full h-full object-cover"
+          style={{ display: loaded ? "block" : "none" }}
         />
 
-        {/* Loading overlay — only before video is ready */}
+        {/* Simple loading state — no poster image */}
         {!loaded && (
-          <div className="absolute inset-0 bg-dark/90 flex items-center justify-center z-30">
+          <div className="absolute inset-0 bg-dark flex items-center justify-center z-30">
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-salmon border-t-transparent rounded-full animate-spin mx-auto mb-3" />
               <p className="text-white/40 text-xs tracking-wider uppercase">Loading</p>

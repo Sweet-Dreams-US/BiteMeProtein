@@ -50,12 +50,17 @@ const productImageMap: Record<string, string> = {
 
 function HeroTitle() {
   const [opacity, setOpacity] = useState(1);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     const onScroll = () => {
       const scrollY = window.scrollY;
-      const fadeEnd = window.innerHeight * 0.35;
-      setOpacity(Math.max(0, 1 - scrollY / fadeEnd));
+      // Fade out over the first 60% of viewport height (slow, cinematic)
+      const fadeEnd = window.innerHeight * 0.6;
+      const progress = Math.min(1, scrollY / fadeEnd);
+      setOpacity(Math.max(0, 1 - progress));
+      // Subtle scale-down as you scroll (1 → 0.92)
+      setScale(1 - progress * 0.08);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -64,17 +69,17 @@ function HeroTitle() {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none"
-      style={{ opacity }}
+      style={{ opacity, transform: `scale(${scale})` }}
     >
       <div className="text-center px-6">
         <h1
-          className="font-fun text-white text-6xl md:text-8xl lg:text-9xl select-none"
+          className="font-fun text-white text-7xl md:text-9xl lg:text-[10rem] select-none leading-none"
           style={{ textShadow: "0 6px 40px rgba(0,0,0,0.6), 0 2px 12px rgba(0,0,0,0.4)" }}
         >
           Bite Me
         </h1>
         <p
-          className="text-white/80 text-sm md:text-base tracking-[0.3em] uppercase font-semibold mt-3"
+          className="text-white/80 text-sm md:text-lg tracking-[0.35em] uppercase font-semibold mt-4"
           style={{ textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
         >
           Protein Bakery
