@@ -15,6 +15,7 @@ export default function ScrollVideo({ src, className = "", style, children }: Sc
   const sectionRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const rafRef = useRef<number>(0);
+  const currentTimeRef = useRef<number>(0);
 
   // Load video — retry on mobile
   useEffect(() => {
@@ -56,23 +57,35 @@ export default function ScrollVideo({ src, className = "", style, children }: Sc
     };
   }, [loaded]);
 
-  // Scroll-linked playback
+  // Scroll-linked playback with smooth interpolation
+  // On Mac, direct seeks are fast (hardware VideoToolbox).
+  // On Windows/PC, seeks are slower — lerp smooths it out so we
+  // don't hammer the decoder with a seek every single frame.
   useEffect(() => {
     const video = videoRef.current;
     const section = sectionRef.current;
     if (!video || !section || !loaded || !video.duration) return;
 
+    currentTimeRef.current = video.currentTime;
+
     const update = () => {
       const rect = section.getBoundingClientRect();
       const scrollable = rect.height - window.innerHeight;
-      if (scrollable <= 0) return;
+      if (scrollable <= 0) {
+        rafRef.current = requestAnimationFrame(update);
+        return;
+      }
 
       const scrolled = -rect.top;
       const progress = Math.max(0, Math.min(1, scrolled / scrollable));
       const target = progress * video.duration;
 
-      if (Math.abs(video.currentTime - target) > 0.02) {
-        video.currentTime = target;
+      // Lerp: glide toward target instead of jumping (0.1 = smooth, 1 = instant)
+      currentTimeRef.current += (target - currentTimeRef.current) * 0.1;
+
+      // Only seek if the difference is meaningful (avoids micro-seeks that cause jank)
+      if (Math.abs(video.currentTime - currentTimeRef.current) > 0.05) {
+        video.currentTime = currentTimeRef.current;
       }
 
       rafRef.current = requestAnimationFrame(update);
