@@ -17,7 +17,6 @@ const footerLinks = {
     { href: "/ambassador", label: "Brand Ambassadors" },
     { href: "/careers", label: "Careers" },
     { href: "/contact", label: "Contact Us" },
-    { href: "https://instagram.com/biteme_protein", label: "Instagram" },
   ],
 };
 
@@ -25,7 +24,8 @@ export default function Footer() {
   return (
     <footer className="bg-dark text-cream/80">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+          {/* Brand */}
           <div>
             <h3 className="font-fun text-salmon text-3xl mb-4">BITE ME</h3>
             <p className="text-cream/50 text-sm leading-relaxed max-w-xs">
@@ -34,6 +34,7 @@ export default function Footer() {
             </p>
           </div>
 
+          {/* Shop */}
           <div>
             <h4 className="text-cream text-xs uppercase tracking-widest font-bold mb-4">Shop</h4>
             <ul className="flex flex-col gap-3">
@@ -47,6 +48,7 @@ export default function Footer() {
             </ul>
           </div>
 
+          {/* Company */}
           <div>
             <h4 className="text-cream text-xs uppercase tracking-widest font-bold mb-4">Company</h4>
             <ul className="flex flex-col gap-3">
@@ -57,6 +59,28 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="text-cream text-xs uppercase tracking-widest font-bold mb-4">Get in Touch</h4>
+            <ul className="flex flex-col gap-3">
+              <li>
+                <a href="tel:9546044127" className="text-cream/50 hover:text-salmon transition-colors text-sm">
+                  (954) 604-4127
+                </a>
+              </li>
+              <li>
+                <a href="mailto:bitemeproteinbakery@gmail.com" className="text-cream/50 hover:text-salmon transition-colors text-sm">
+                  bitemeproteinbakery@gmail.com
+                </a>
+              </li>
+              <li>
+                <a href="https://instagram.com/biteme_protein" target="_blank" rel="noopener noreferrer" className="text-cream/50 hover:text-salmon transition-colors text-sm">
+                  @biteme_protein
+                </a>
+              </li>
             </ul>
           </div>
         </div>

@@ -139,7 +139,7 @@ export default function CartDrawer() {
                   {/* Individual items */}
                   {items.length > 0 && (
                     <div>
-                      <p className="text-[#7a6a62] text-xs font-bold uppercase tracking-wider mb-2">Individual Items (Pickup)</p>
+                      <p className="text-[#7a6a62] text-xs font-bold uppercase tracking-wider mb-2">Individual Items</p>
                       {items.map((item) => (
                         <div key={item.variationId} className="bg-[#FFF5EE] rounded-lg p-3 mb-2 flex items-center justify-between">
                           <div>

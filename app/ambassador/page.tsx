@@ -115,7 +115,7 @@ export default function AmbassadorPage() {
             <p className="text-dark/60 mb-8 max-w-md mx-auto">
               Apply below and we&apos;ll be in touch. Include your social media handles and why you&apos;d be a great fit.
             </p>
-            <a href="mailto:hello@bitemeprotein.com?subject=Brand Ambassador Application"
+            <a href="mailto:bitemeproteinbakery@gmail.com?subject=Brand Ambassador Application"
               className="btn-primary text-lg px-10 py-4">
               Apply Now
             </a>

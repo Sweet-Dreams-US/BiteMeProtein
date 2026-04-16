@@ -65,37 +65,61 @@ export default function AboutPage() {
           </ScrollReveal>
           <ScrollReveal delay={0.2}>
             <p className="text-body-lg text-gray max-w-2xl mx-auto mt-6">
-              What started as a craving for something better turned into a brand built on one simple idea: protein treats should feel just as good as they look.
+              Bite Me Protein Bakery was created to redefine protein desserts —
+              elevated, craveable, and designed to fit your lifestyle.
             </p>
           </ScrollReveal>
         </div>
       </section>
 
-      {/* ===== PHOTO BANNER ===== */}
-      <section className="bg-cream pb-8">
+      {/* ===== HALEY PHOTO GRID — 4 personal photos ===== */}
+      <section className="py-4 bg-cream">
         <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="aspect-[2.5/1] rounded-3xl overflow-hidden relative shadow-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <ScrollReveal className="aspect-square rounded-2xl overflow-hidden relative shadow-lg">
               <Image
-                src={images.allProducts4}
-                alt="Bite Me Protein products spread"
+                src={images.about.haley1}
+                alt="Haley"
                 fill
-                className="object-cover"
+                className="object-cover hover:scale-105 transition-transform duration-700"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-cream/40 via-transparent to-transparent" />
-            </div>
-          </ScrollReveal>
+            </ScrollReveal>
+            <ScrollReveal delay={0.1} className="aspect-square rounded-2xl overflow-hidden relative shadow-lg">
+              <Image
+                src={images.about.haley2}
+                alt="Haley"
+                fill
+                className="object-cover hover:scale-105 transition-transform duration-700"
+              />
+            </ScrollReveal>
+            <ScrollReveal delay={0.2} className="aspect-square rounded-2xl overflow-hidden relative shadow-lg">
+              <Image
+                src={images.about.haley3}
+                alt="Haley"
+                fill
+                className="object-cover hover:scale-105 transition-transform duration-700"
+              />
+            </ScrollReveal>
+            <ScrollReveal delay={0.3} className="aspect-square rounded-2xl overflow-hidden relative shadow-lg">
+              <Image
+                src={images.about.haley4}
+                alt="Haley"
+                fill
+                className="object-cover hover:scale-105 transition-transform duration-700"
+              />
+            </ScrollReveal>
+          </div>
         </div>
       </section>
 
-      {/* ===== HALEY'S STORY ===== */}
+      {/* ===== BEHIND THE BITE ===== */}
       <section className="py-24 md:py-32 bg-white relative overflow-hidden">
         <div className="absolute bottom-16 right-12 w-20 h-20 rounded-full bg-golden-light/30 animate-float" />
         <div className="absolute top-20 left-8 w-14 h-14 rounded-full bg-salmon/15 animate-float-reverse" />
 
         <div className="relative max-w-3xl mx-auto px-6 lg:px-8">
           <ScrollReveal>
-            <p className="stamp text-burgundy mb-6">Our Story</p>
+            <p className="stamp text-burgundy mb-6">Behind the Bite</p>
             <h2 className="text-section font-fun text-burgundy mb-10">
               A little bit me. A little bit mom.
             </h2>
@@ -128,14 +152,31 @@ export default function AboutPage() {
                 Now, everything you see here is high-protein, lower-sugar, and made to be craved — not settled for. Think soft banana bread, rich brownies, and muffins that actually hit.
               </p>
               <p className="text-burgundy font-display italic text-xl">
-                So yes — it&apos;s Bite Me… but it&apos;s also a little bit us.
+                So yes — it&apos;s Bite Me... but it&apos;s also a little bit us.
               </p>
             </div>
           </ScrollReveal>
         </div>
       </section>
 
-      {/* ===== PHOTO GRID ===== */}
+      {/* ===== BRAND STATEMENT ===== */}
+      <section className="py-20 bg-burgundy relative overflow-hidden">
+        <div className="absolute top-6 right-10 w-16 h-16 rounded-full bg-white/10 animate-float" />
+        <div className="absolute bottom-8 left-14 w-12 h-12 rounded-full bg-salmon/20 animate-float-reverse" />
+
+        <div className="relative max-w-3xl mx-auto px-6 lg:px-8 text-center">
+          <ScrollReveal>
+            <p className="font-fun text-white text-hero mb-6">
+              Every product is crafted to feel indulgent while supporting your goals.
+            </p>
+            <p className="text-white/60 text-lg">
+              Because it should taste as good as it looks.
+            </p>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ===== PRODUCT PHOTO GRID ===== */}
       <section className="py-4 bg-cream">
         <div className="max-w-6xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

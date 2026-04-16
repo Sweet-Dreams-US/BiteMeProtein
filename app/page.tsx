@@ -54,7 +54,7 @@ function HeroTitle() {
   useEffect(() => {
     const onScroll = () => {
       const scrollY = window.scrollY;
-      const fadeEnd = window.innerHeight * 0.4;
+      const fadeEnd = window.innerHeight * 0.35;
       setOpacity(Math.max(0, 1 - scrollY / fadeEnd));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -66,12 +66,20 @@ function HeroTitle() {
       className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none"
       style={{ opacity }}
     >
-      <h1
-        className="font-fun text-white text-5xl md:text-7xl lg:text-8xl text-center px-6 select-none"
-        style={{ textShadow: "0 4px 30px rgba(0,0,0,0.4), 0 2px 10px rgba(0,0,0,0.3)" }}
-      >
-        Bite Me
-      </h1>
+      <div className="text-center px-6">
+        <h1
+          className="font-fun text-white text-6xl md:text-8xl lg:text-9xl select-none"
+          style={{ textShadow: "0 6px 40px rgba(0,0,0,0.6), 0 2px 12px rgba(0,0,0,0.4)" }}
+        >
+          Bite Me
+        </h1>
+        <p
+          className="text-white/80 text-sm md:text-base tracking-[0.3em] uppercase font-semibold mt-3"
+          style={{ textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
+        >
+          Protein Bakery
+        </p>
+      </div>
     </div>
   );
 }
@@ -108,40 +116,49 @@ export default function Home() {
   return (
     <>
       {/* ===== HERO — SCROLL VIDEO ===== */}
-      <ScrollVideo src={HERO_VIDEO} poster={images.allProducts2} className="relative" style={{ height: "300vh" }}>
-        {/* Minimal bottom fade */}
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-cream to-transparent pointer-events-none z-10" />
+      <ScrollVideo src={HERO_VIDEO} className="relative" style={{ height: "300vh" }}>
+        {/* Dark gradient overlays for text readability */}
+        <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none z-10" />
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/30 to-transparent pointer-events-none z-10" />
 
         {/* Center title — fades out as you scroll */}
         <HeroTitle />
 
         {/* Bottom bar — brand name left, tagline right, CTAs below */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 px-6 lg:px-8 pb-10">
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-6 lg:px-8 pb-14">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-end justify-between mb-6">
+            <div className="flex items-end justify-between mb-8">
               <ScrollReveal>
-                <p className="font-fun text-burgundy text-3xl md:text-4xl font-bold drop-shadow-sm mb-16">
+                <p className="font-fun text-white text-3xl md:text-4xl font-bold"
+                   style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5)" }}>
                   Bite Me Protein Bakery
                 </p>
               </ScrollReveal>
               <ScrollReveal delay={0.1}>
-                <p className="text-dark/70 text-sm md:text-base font-medium max-w-sm text-right hidden md:block mb-16">
+                <p className="text-white/80 text-sm md:text-base font-medium max-w-sm text-right hidden md:block"
+                   style={{ textShadow: "0 1px 8px rgba(0,0,0,0.4)" }}>
                   {hero.subtext}
                 </p>
               </ScrollReveal>
             </div>
             <ScrollReveal delay={0.2}>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/shop" className="btn-primary">{hero.cta_primary}</Link>
-                <Link href="/quiz" className="btn-secondary">{hero.cta_secondary}</Link>
+                <Link href="/shop" className="bg-white text-burgundy px-8 py-4 rounded-full font-bold text-base hover:bg-cream hover:scale-105 transition-all shadow-lg inline-flex items-center justify-center">
+                  {hero.cta_primary}
+                </Link>
+                <Link href="/quiz" className="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-base hover:bg-white hover:text-burgundy transition-all inline-flex items-center justify-center"
+                      style={{ textShadow: "0 1px 6px rgba(0,0,0,0.3)" }}>
+                  {hero.cta_secondary}
+                </Link>
               </div>
             </ScrollReveal>
           </div>
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 animate-bounce-gentle z-20">
-          <span className="text-dark/25 text-[10px] uppercase tracking-[0.3em] font-semibold">Scroll</span>
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 animate-bounce-gentle z-20">
+          <span className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-semibold"
+                style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>Scroll</span>
         </div>
       </ScrollVideo>
 

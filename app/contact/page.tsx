@@ -47,10 +47,10 @@ export default function ContactPage() {
             </ScrollReveal>
 
             <ScrollReveal delay={0.1}>
-              <a href="mailto:bitemeprotein26@gmail.com" className="card-bakery p-8 text-center block hover:shadow-lg transition-all">
+              <a href="mailto:bitemeproteinbakery@gmail.com" className="card-bakery p-8 text-center block hover:shadow-lg transition-all">
                 <span className="text-4xl mb-4 block">📧</span>
                 <h3 className="text-dark font-bold text-lg mb-2">Email</h3>
-                <p className="text-burgundy font-semibold text-sm">bitemeprotein26@gmail.com</p>
+                <p className="text-burgundy font-semibold text-sm">bitemeproteinbakery@gmail.com</p>
               </a>
             </ScrollReveal>
 

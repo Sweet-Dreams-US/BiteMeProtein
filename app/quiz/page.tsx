@@ -163,7 +163,7 @@ const questions: Question[] = [
       },
       {
         text: "Chocolate chips mixed in",
-        emoji: "🥜",
+        emoji: "🍫",
         score: { bread: 3 },
       },
     ],
@@ -262,13 +262,13 @@ const results: Record<string, ResultData> = {
     ],
   },
   bread: {
-    title: "Chocolate Chip Protein Banana Bread Bites",
-    product: "Chocolate Chip Protein Banana Bread Bites",
+    title: "Chocolate Chip Protein Banana Bread",
+    product: "Chocolate Chip Protein Banana Bread",
     tagline: "Warm, comforting, freshly baked.",
     emoji: "🍌",
     shopAnchor: "/shop#product-banana-bread",
     whyMatch:
-      "You're drawn to comfort food. You like things warm, familiar, and homemade — the kind of snack that reminds you of lazy Sunday mornings. You're practical about nutrition but refuse to sacrifice flavor. The banana bread bites are exactly that energy: naturally sweet from real bananas, studded with chocolate chips, and packed with protein that fuels your day without feeling clinical.",
+      "You're drawn to comfort food. You like things warm, familiar, and homemade — the kind of snack that reminds you of lazy Sunday mornings. You're practical about nutrition but refuse to sacrifice flavor. The banana bread is exactly that energy: naturally sweet from real bananas, studded with chocolate chips, and packed with protein that fuels your day without feeling clinical.",
     facts: [
       "~18g protein per tin",
       "Made with real bananas & chocolate chips",
@@ -442,6 +442,7 @@ export default function QuizPage() {
                       onClick={() => handleAnswer(answer.score, i)}
                       className="text-left card-bakery rounded-2xl p-6 border-2 border-transparent hover:border-salmon/40 transition-all group cursor-pointer active:scale-[0.97]"
                     >
+                      <span className="text-2xl mb-2 block">{answer.emoji}</span>
                       <span className="text-dark font-medium text-lg group-hover:text-burgundy transition-colors">
                         {answer.text}
                       </span>

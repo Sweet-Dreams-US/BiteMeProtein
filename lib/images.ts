@@ -70,4 +70,11 @@ export const images = {
       `${BASE_EXTRAS}/chocChipRasberryRedBackground3.jpg`,
     ],
   },
+  // About / personal photos
+  about: {
+    haley1: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/IMG_3676.jpg",
+    haley2: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/IMG_3832.jpg",
+    haley3: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/IMG_7258%202.jpg",
+    haley4: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/IMG_8248.JPG",
+  },
 } as const;

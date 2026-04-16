@@ -88,6 +88,14 @@ const productShowcase: Record<string, {
   },
 };
 
+// Display names — shorter/cleaner names for the storefront
+const displayNames: Record<string, string> = {
+  "Chocolate Chip Protein Banana Bread Bites": "Chocolate Chip Protein Banana Bread",
+  "Raspberry Chocolate Chip Protein Banana Bread Bites": "Raspberry Chocolate Chip Protein Banana Bread",
+};
+
+const getDisplayName = (name: string) => displayNames[name] || name;
+
 export default function ShopPage() {
   return (
     <Suspense>
@@ -284,10 +292,10 @@ function ShopContent() {
                 ))}
               </div>
 
-              {/* Individual pickup option */}
+              {/* Individual item option */}
               <ScrollReveal delay={0.3}>
                 <p className="text-center text-dark/30 text-sm mt-6">
-                  Picking up in person? You can also add individual items below.
+                  You can also add individual items below.
                 </p>
               </ScrollReveal>
             </div>
@@ -365,7 +373,7 @@ function ShopContent() {
                           <div className="md:w-3/5 p-6 md:p-8 flex flex-col justify-center">
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-2xl">{showcase.emoji}</span>
-                              <h3 className="font-fun text-burgundy text-2xl md:text-3xl">{product.name}</h3>
+                              <h3 className="font-fun text-burgundy text-2xl md:text-3xl">{getDisplayName(product.name)}</h3>
                             </div>
 
                             <p className="text-dark/40 text-xs font-bold uppercase tracking-wider mb-3">{showcase.flavorNotes}</p>
@@ -374,10 +382,9 @@ function ShopContent() {
                             </p>
 
                             <div className="flex flex-wrap gap-1.5 mb-4">
-                              {(enrichment?.ingredients || "Gluten-free · Low sugar · No nuts").split("·").map((d) => (
+                              {(enrichment?.ingredients || "Gluten-free · Low sugar · No nuts · Kosher certified").split("·").map((d) => (
                                 <span key={d.trim()} className="bg-cream-dark/40 text-dark/50 text-xs font-semibold px-3 py-1 rounded-full">{d.trim()}</span>
                               ))}
-                              <span className="bg-cream-dark/40 text-dark/50 text-xs font-semibold px-3 py-1 rounded-full">Kosher certified</span>
                               {enrichment?.nutrition_info && (
                                 <span className="bg-burgundy/10 text-burgundy text-xs font-bold px-3 py-1 rounded-full">{enrichment.nutrition_info}</span>
                               )}
@@ -510,8 +517,46 @@ function ShopContent() {
             </section>
           )}
 
-          {/* ===== SPECIAL ORDERS ===== */}
+          {/* ===== MERCH — COMING SOON ===== */}
+          <section className="py-20 bg-gradient-warm">
+            <div className="max-w-4xl mx-auto px-6 lg:px-8">
+              <ScrollReveal>
+                <div className="card-bakery p-8 md:p-12 text-center relative overflow-hidden">
+                  <div className="absolute top-4 right-4 bg-salmon/15 text-salmon text-xs font-bold px-3 py-1 rounded-full">
+                    Coming Soon
+                  </div>
+                  <span className="text-5xl mb-4 block">👕</span>
+                  <h2 className="font-fun text-burgundy text-3xl md:text-4xl mb-3">Bite Me Merch</h2>
+                  <p className="text-dark/50 text-lg mb-4 max-w-lg mx-auto">
+                    Rep the brand. Hoodies, tees, hats, and more — designed for the gym, the streets, and everywhere in between.
+                  </p>
+                  <p className="text-burgundy font-bold text-sm">Stay tuned. Big things are baking.</p>
+                </div>
+              </ScrollReveal>
+            </div>
+          </section>
+
+          {/* ===== KIDS LINE — COMING SOON ===== */}
           <section className="py-20 bg-white">
+            <div className="max-w-4xl mx-auto px-6 lg:px-8">
+              <ScrollReveal>
+                <div className="card-bakery p-8 md:p-12 text-center relative overflow-hidden">
+                  <div className="absolute top-4 right-4 bg-golden/20 text-golden-dark text-xs font-bold px-3 py-1 rounded-full">
+                    Coming Soon
+                  </div>
+                  <span className="text-5xl mb-4 block">🧒</span>
+                  <h2 className="font-fun text-burgundy text-3xl md:text-4xl mb-3">Bite Me Kids</h2>
+                  <p className="text-dark/50 text-lg mb-4 max-w-lg mx-auto">
+                    Protein-packed treats made just for little ones. Same real ingredients, same great taste — sized and sweetened for kids.
+                  </p>
+                  <p className="text-burgundy font-bold text-sm">For the tiny snackers in your life.</p>
+                </div>
+              </ScrollReveal>
+            </div>
+          </section>
+
+          {/* ===== SPECIAL ORDERS ===== */}
+          <section className="py-20 bg-cream">
             <div className="max-w-4xl mx-auto px-6 lg:px-8">
               <ScrollReveal>
                 <div className="card-bakery p-8 md:p-12 text-center">
