@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { squareClient, SQUARE_LOCATION_ID } from "@/lib/square";
+import { getSquareClient, getLocationId } from "@/lib/square";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -7,6 +7,9 @@ import crypto from "crypto";
 // POST — Set inventory count for a variation
 export async function POST(req: NextRequest) {
   try {
+    const squareClient = getSquareClient();
+    const SQUARE_LOCATION_ID = getLocationId();
+
     const body = await req.json();
     const { variationId, quantity } = body;
 

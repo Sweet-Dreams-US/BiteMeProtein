@@ -1,14 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Explicitly pass server-side env vars so they're available in API routes
+  // Prevent Turbopack from bundling square — let it run as native Node.js
+  // so it can access process.env at runtime
   serverExternalPackages: ["square"],
-  env: {
-    SQUARE_ACCESS_TOKEN: process.env.SQUARE_ACCESS_TOKEN,
-    SQUARE_LOCATION_ID: process.env.SQUARE_LOCATION_ID,
-    SQUARE_APPLICATION_ID: process.env.SQUARE_APPLICATION_ID,
-    SQUARE_ENVIRONMENT: process.env.SQUARE_ENVIRONMENT,
-  },
   images: {
     remotePatterns: [
       {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { squareClient, SQUARE_LOCATION_ID } from "@/lib/square";
+import { getSquareClient, getLocationId } from "@/lib/square";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -17,6 +17,9 @@ interface CheckoutItem {
 
 export async function POST(req: NextRequest) {
   try {
+    const squareClient = getSquareClient();
+    const SQUARE_LOCATION_ID = getLocationId();
+
     if (!SQUARE_LOCATION_ID) {
       return NextResponse.json({ error: "Square location not configured" }, { status: 500 });
     }

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { squareClient, SQUARE_LOCATION_ID } from "@/lib/square";
+import { getSquareClient, getLocationId } from "@/lib/square";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // GET — List recent orders
 export async function GET() {
   try {
+    const squareClient = getSquareClient();
+    const SQUARE_LOCATION_ID = getLocationId();
+
     const result = await squareClient.orders.search({
       locationIds: [SQUARE_LOCATION_ID],
       query: {

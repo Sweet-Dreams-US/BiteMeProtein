@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { squareClient, SQUARE_LOCATION_ID } from "@/lib/square";
+import { getSquareClient, getLocationId } from "@/lib/square";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -7,6 +7,9 @@ import crypto from "crypto";
 // GET — List all catalog items
 export async function GET() {
   try {
+    const squareClient = getSquareClient();
+    const SQUARE_LOCATION_ID = getLocationId();
+
     const result = await squareClient.catalog.searchItems({
       enabledLocationIds: [SQUARE_LOCATION_ID],
       productTypes: ["REGULAR"],
@@ -75,6 +78,9 @@ export async function GET() {
 // POST — Create a new catalog item
 export async function POST(req: NextRequest) {
   try {
+    const squareClient = getSquareClient();
+    const SQUARE_LOCATION_ID = getLocationId();
+
     const body = await req.json();
     const {
       name,
@@ -148,6 +154,9 @@ export async function POST(req: NextRequest) {
 // PUT — Update a catalog item
 export async function PUT(req: NextRequest) {
   try {
+    const squareClient = getSquareClient();
+    const SQUARE_LOCATION_ID = getLocationId();
+
     const body = await req.json();
     const { id, name, description, variations, trackInventory } = body;
 
@@ -222,6 +231,9 @@ export async function PUT(req: NextRequest) {
 // DELETE — Delete a catalog item
 export async function DELETE(req: NextRequest) {
   try {
+    const squareClient = getSquareClient();
+    const SQUARE_LOCATION_ID = getLocationId();
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
