@@ -301,30 +301,30 @@ function ShopContent() {
             </div>
           </section>
 
-          {/* ===== ACTIVE BUNDLE PROGRESS ===== */}
+          {/* ===== STICKY BUNDLE PROGRESS — floats at bottom while shopping ===== */}
           <AnimatePresence>
             {selectedTier && activeBundleIndex !== null && (
-              <motion.section
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="bg-[#FCE4EC] border-y border-[#E8A0BF]/20 overflow-hidden"
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 40 }}
+                className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E8A0BF]/30 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
               >
-                <div className="max-w-4xl mx-auto px-6 lg:px-8 py-5">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="max-w-4xl mx-auto px-6 lg:px-8 py-4">
+                  <div className="flex items-center justify-between mb-2">
                     <div>
                       <h3 className="text-[#c2185b] font-bold text-sm">
-                        Building your {selectedTier.name}
+                        {selectedTier.name}
                       </h3>
                       <p className="text-[#c2185b]/60 text-xs">
-                        {currentBundleCount}/{selectedTier.item_count} treats selected
+                        {currentBundleCount} / {selectedTier.item_count} treats selected
                       </p>
                     </div>
-                    <button onClick={() => setIsOpen(true)} className="bg-[#E8A0BF] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#d889ad]">
+                    <button onClick={() => setIsOpen(true)} className="bg-[#E8A0BF] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#d889ad] transition-colors">
                       {currentBundleCount >= selectedTier.item_count ? "View Cart ✓" : `${selectedTier.item_count - currentBundleCount} more`}
                     </button>
                   </div>
-                  <div className="h-2 bg-white/50 rounded-full overflow-hidden">
+                  <div className="h-2 bg-[#FCE4EC] rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-[#E8A0BF] rounded-full"
                       animate={{ width: `${(currentBundleCount / selectedTier.item_count) * 100}%` }}
@@ -332,12 +332,12 @@ function ShopContent() {
                     />
                   </div>
                 </div>
-              </motion.section>
+              </motion.div>
             )}
           </AnimatePresence>
 
           {/* ===== STEP 2: CHOOSE YOUR TREATS ===== */}
-          <section className="py-16 bg-white">
+          <section className={`py-16 bg-white ${selectedTier ? "pb-32" : ""}`}>
             <div className="max-w-5xl mx-auto px-6 lg:px-8">
               <ScrollReveal>
                 <div className="text-center mb-12">
@@ -403,49 +403,41 @@ function ShopContent() {
                             </div>
 
                             <div className="flex gap-2 items-stretch">
-                              {/* Add to bundle with quantity controls */}
+                              {/* Add to bundle — always shows +/count/− stepper */}
                               {activeBundleIndex !== null && selectedTier ? (
                                 (() => {
                                   const v = product.variations[0];
                                   const count = v ? getProductCountInBundle(v.id) : 0;
                                   const bundleFull = currentBundleCount >= selectedTier.item_count;
 
-                                  if (count === 0) {
-                                    return (
-                                      <motion.button
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => handleAddToBundle(product)}
-                                        disabled={bundleFull}
-                                        className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${
-                                          bundleFull
-                                            ? "bg-cream-dark text-dark/30 cursor-not-allowed"
-                                            : "bg-[#E8A0BF] text-white hover:bg-[#d889ad]"
-                                        }`}
-                                      >
-                                        {bundleFull ? "Box is full" : `+ Add to ${selectedTier.name}`}
-                                      </motion.button>
-                                    );
-                                  }
-
                                   return (
-                                    <div className="flex-1 flex items-center justify-between bg-[#E8A0BF] rounded-xl p-1.5">
+                                    <div className={`flex-1 flex items-center justify-between rounded-xl p-1.5 transition-colors ${
+                                      count > 0 ? "bg-[#E8A0BF]" : "bg-[#FFF5EE] border border-[#e8ddd4]"
+                                    }`}>
                                       <button
                                         onClick={() => v && handleRemoveFromBundle(v.id)}
-                                        className="w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xl font-bold flex items-center justify-center transition-colors"
+                                        disabled={count === 0}
+                                        className={`w-10 h-10 rounded-lg text-xl font-bold flex items-center justify-center transition-colors ${
+                                          count > 0
+                                            ? "bg-white/20 hover:bg-white/30 text-white"
+                                            : "bg-transparent text-dark/20 cursor-not-allowed"
+                                        }`}
                                       >
                                         −
                                       </button>
-                                      <div className="text-center">
-                                        <p className="text-white font-bold text-lg leading-none">{count}</p>
-                                        <p className="text-white/70 text-[9px] uppercase tracking-wider">In box</p>
+                                      <div className="text-center min-w-[60px]">
+                                        <p className={`font-bold text-lg leading-none ${count > 0 ? "text-white" : "text-dark/40"}`}>{count}</p>
+                                        <p className={`text-[9px] uppercase tracking-wider ${count > 0 ? "text-white/70" : "text-dark/25"}`}>
+                                          In box
+                                        </p>
                                       </div>
                                       <button
                                         onClick={() => handleAddToBundle(product)}
                                         disabled={bundleFull}
                                         className={`w-10 h-10 rounded-lg text-xl font-bold flex items-center justify-center transition-colors ${
                                           bundleFull
-                                            ? "bg-white/10 text-white/40 cursor-not-allowed"
-                                            : "bg-white/20 hover:bg-white/30 text-white"
+                                            ? count > 0 ? "bg-white/10 text-white/40 cursor-not-allowed" : "bg-dark/5 text-dark/20 cursor-not-allowed"
+                                            : count > 0 ? "bg-white/20 hover:bg-white/30 text-white" : "bg-[#E8A0BF] hover:bg-[#d889ad] text-white"
                                         }`}
                                       >
                                         +
