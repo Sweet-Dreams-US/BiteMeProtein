@@ -73,14 +73,12 @@ export async function POST(req: NextRequest) {
       },
     ] : [];
 
-    const result = await (squareClient.checkout as any).paymentLinks.create({
+    const result = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: crypto.randomUUID(),
       order: {
-        order: {
-          locationId: SQUARE_LOCATION_ID,
-          lineItems,
-          ...(serviceCharges.length > 0 ? { serviceCharges } : {}),
-        },
+        locationId: SQUARE_LOCATION_ID,
+        lineItems,
+        ...(serviceCharges.length > 0 ? { serviceCharges } : {}),
       },
       checkoutOptions: {
         redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://bitemeprotein.com"}/shop?order=success`,
