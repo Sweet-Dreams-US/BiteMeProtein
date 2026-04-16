@@ -34,22 +34,30 @@ export default function CartDrawer() {
     if (!canCheckout) return;
     setCheckingOut(true);
 
-    const lineItems: { variationId: string; quantity: number }[] = [];
-    bundles.forEach((b) => {
-      b.items.forEach((item) => {
-        lineItems.push({ variationId: item.variationId, quantity: item.quantity });
-      });
-    });
-    items.forEach((item) => {
-      lineItems.push({ variationId: item.variationId, quantity: item.quantity });
-    });
+    // Build bundles with their flat tier price (not individual item prices)
+    const checkoutBundles = bundles.map((b) => ({
+      tierName: b.tier.name,
+      priceCents: b.tier.price_cents,
+      items: b.items.map((item) => ({
+        variationId: item.variationId,
+        name: item.name,
+        quantity: item.quantity,
+      })),
+    }));
+
+    // Individual items use their catalog price from Square
+    const individualItems = items.map((item) => ({
+      variationId: item.variationId,
+      quantity: item.quantity,
+    }));
 
     try {
       const res = await fetch("/api/square/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: lineItems,
+          bundles: checkoutBundles,
+          items: individualItems,
           orderType: orderType || "pickup",
           includeShipping: orderType === "shipping" && hasShippableBundle,
           shippingCostCents: shippingCost,
