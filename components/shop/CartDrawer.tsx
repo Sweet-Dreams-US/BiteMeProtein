@@ -1,20 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/lib/cart";
 
 export default function CartDrawer() {
-  const { bundles, removeBundle, removeItemFromBundle, items, removeItem, updateQuantity, isOpen, setIsOpen, clearCart, totalItems, totalPrice, hasShippableBundle } = useCart();
+  const router = useRouter();
+  const { bundles, removeBundle, removeItemFromBundle, items, removeItem, updateQuantity, isOpen, setIsOpen, clearCart, totalItems, totalPrice } = useCart();
   const [checkingOut, setCheckingOut] = useState(false);
-  const [orderType, setOrderType] = useState<"pickup" | "shipping" | null>(null);
 
   const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
   const isEmpty = bundles.length === 0 && items.length === 0;
-
-  const shippingCost = bundles
-    .filter((b) => b.tier.shipping_eligible)
-    .reduce((s, b) => s + (b.tier.shipping_cost_cents || 1499), 0);
 
   const totalBundleItems = bundles.reduce((s, b) => s + b.items.reduce((si, i) => si + i.quantity, 0), 0);
   const bundleCost = bundles.reduce((s, b) => s + b.tier.price_cents, 0);
@@ -30,46 +27,12 @@ export default function CartDrawer() {
   const allBundlesFull = bundles.every((b) => b.items.reduce((s, i) => s + i.quantity, 0) >= b.tier.item_count);
   const canCheckout = !isEmpty && (bundles.length === 0 || allBundlesFull);
 
-  const handleCheckout = async () => {
+  // Navigate to the in-site embedded checkout page
+  const handleCheckout = () => {
     if (!canCheckout) return;
     setCheckingOut(true);
-
-    // Build bundles with their flat tier price (not individual item prices)
-    const checkoutBundles = bundles.map((b) => ({
-      tierName: b.tier.name,
-      priceCents: b.tier.price_cents,
-      items: b.items.map((item) => ({
-        variationId: item.variationId,
-        name: item.name,
-        quantity: item.quantity,
-      })),
-    }));
-
-    // Individual items use their catalog price from Square
-    const individualItems = items.map((item) => ({
-      variationId: item.variationId,
-      quantity: item.quantity,
-    }));
-
-    try {
-      const res = await fetch("/api/square/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bundles: checkoutBundles,
-          items: individualItems,
-          orderType: orderType || "pickup",
-          includeShipping: orderType === "shipping" && hasShippableBundle,
-          shippingCostCents: shippingCost,
-        }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      if (data.checkoutUrl) { clearCart(); window.location.href = data.checkoutUrl; }
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Checkout failed.");
-      setCheckingOut(false);
-    }
+    setIsOpen(false);
+    router.push("/checkout");
   };
 
   /* ---------- shared cart content ---------- */
@@ -159,41 +122,19 @@ export default function CartDrawer() {
       {/* Footer */}
       {!isEmpty && (
         <div className="p-5 border-t border-[#f0e6de]">
-          {/* Order type picker */}
-          {hasShippableBundle && (
-            <div className="flex gap-2 mb-4">
-              <button onClick={() => setOrderType("pickup")}
-                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${orderType === "pickup" ? "bg-[#E8A0BF] text-white" : "bg-[#FFF5EE] text-[#7a6a62] border border-[#e8ddd4]"}`}>
-                🏪 Pickup
-              </button>
-              <button onClick={() => setOrderType("shipping")}
-                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${orderType === "shipping" ? "bg-[#E8A0BF] text-white" : "bg-[#FFF5EE] text-[#7a6a62] border border-[#e8ddd4]"}`}>
-                📦 Shipping (+{formatPrice(shippingCost)})
-              </button>
-            </div>
-          )}
-
           <div className="space-y-1.5 mb-4">
             <div className="flex justify-between text-sm">
               <span className="text-[#b0a098]">Subtotal</span>
               <span className="text-[#5a3e36] font-semibold">{formatPrice(totalPrice)}</span>
             </div>
-            {orderType === "shipping" && (
-              <div className="flex justify-between text-sm">
-                <span className="text-[#b0a098]">Shipping</span>
-                <span className="text-[#5a3e36] font-semibold">{formatPrice(shippingCost)}</span>
-              </div>
-            )}
             <div className="flex justify-between text-sm">
-              <span className="text-[#b0a098]">Tax</span>
-              <span className="text-[#b0a098] text-xs">At checkout</span>
+              <span className="text-[#b0a098]">Shipping &amp; tax</span>
+              <span className="text-[#b0a098] text-xs">Calculated at checkout</span>
             </div>
             <div className="h-px bg-[#f0e6de] my-1" />
             <div className="flex justify-between">
-              <span className="text-[#5a3e36] font-bold">Total</span>
-              <span className="text-[#5a3e36] text-xl font-bold">
-                {formatPrice(totalPrice + (orderType === "shipping" ? shippingCost : 0))}
-              </span>
+              <span className="text-[#5a3e36] font-bold">Subtotal</span>
+              <span className="text-[#5a3e36] text-xl font-bold">{formatPrice(totalPrice)}</span>
             </div>
           </div>
 
@@ -204,9 +145,9 @@ export default function CartDrawer() {
           )}
 
           <button onClick={handleCheckout}
-            disabled={checkingOut || !canCheckout || (hasShippableBundle && !orderType)}
+            disabled={checkingOut || !canCheckout}
             className="w-full bg-[#E8A0BF] text-white py-3.5 rounded-xl font-bold hover:bg-[#d889ad] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-            {checkingOut ? "Redirecting..." : !canCheckout ? "Fill your box first" : !orderType && hasShippableBundle ? "Choose pickup or shipping" : "Checkout"}
+            {checkingOut ? "Loading…" : !canCheckout ? "Fill your box first" : "Continue to checkout"}
           </button>
           <p className="text-[#b0a098] text-xs text-center mt-2">Secure checkout powered by Square</p>
         </div>
