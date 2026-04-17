@@ -31,6 +31,7 @@ interface CartContextType {
   // Bundle mode
   bundles: CartBundle[];
   addBundle: (tier: BundleTier) => void;
+  addBundleWithItems: (tier: BundleTier, items: CartItem[]) => void;
   removeBundle: (index: number) => void;
   addItemToBundle: (bundleIndex: number, item: Omit<CartItem, "quantity">) => void;
   removeItemFromBundle: (bundleIndex: number, variationId: string) => void;
@@ -47,6 +48,7 @@ interface CartContextType {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   clearCart: () => void;
+  clearIndividualItems: () => void;
   totalItems: number;
   totalPrice: number; // in cents
   hasShippableBundle: boolean;
@@ -63,6 +65,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addBundle = useCallback((tier: BundleTier) => {
     setBundles((prev) => [...prev, { tier, items: [] }]);
     setIsOpen(true);
+  }, []);
+
+  // Create a bundle pre-filled with items (truncated to capacity)
+  const addBundleWithItems = useCallback((tier: BundleTier, items: CartItem[]) => {
+    // Truncate to bundle capacity
+    let remaining = tier.item_count;
+    const trimmed: CartItem[] = [];
+    for (const item of items) {
+      if (remaining <= 0) break;
+      const qty = Math.min(item.quantity, remaining);
+      trimmed.push({ ...item, quantity: qty });
+      remaining -= qty;
+    }
+    setBundles((prev) => [...prev, { tier, items: trimmed }]);
   }, []);
 
   const removeBundle = useCallback((index: number) => {
@@ -143,6 +159,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   }, []);
 
+  const clearIndividualItems = useCallback(() => {
+    setItems([]);
+  }, []);
+
   const bundleTotal = bundles.reduce((sum, b) => sum + b.tier.price_cents, 0);
   const itemTotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const totalPrice = bundleTotal + itemTotal;
@@ -151,9 +171,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider value={{
-      bundles, addBundle, removeBundle, addItemToBundle, removeItemFromBundle, getBundleItemCount, isBundleFull,
+      bundles, addBundle, addBundleWithItems, removeBundle, addItemToBundle, removeItemFromBundle, getBundleItemCount, isBundleFull,
       items, addItem, removeItem, updateQuantity,
-      isOpen, setIsOpen, clearCart, totalItems, totalPrice, hasShippableBundle,
+      isOpen, setIsOpen, clearCart, clearIndividualItems, totalItems, totalPrice, hasShippableBundle,
     }}>
       {children}
     </CartContext.Provider>

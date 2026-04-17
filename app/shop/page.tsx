@@ -105,7 +105,7 @@ export default function ShopPage() {
 }
 
 function ShopContent() {
-  const { addBundle, addItemToBundle, removeItemFromBundle, bundles, addItem, setIsOpen } = useCart();
+  const { addBundle, addBundleWithItems, addItemToBundle, removeItemFromBundle, bundles, items: individualItems, addItem, clearIndividualItems, setIsOpen } = useCart();
   const searchParams = useSearchParams();
   const orderSuccess = searchParams.get("order") === "success";
 
@@ -148,9 +148,16 @@ function ShopContent() {
 
   const handleStartBundle = (tier: BundleTier) => {
     const idx = nextBundleIndex;
-    addBundle(tier);
+    // If individual items exist, flow them into the new bundle (up to capacity)
+    if (individualItems.length > 0) {
+      addBundleWithItems(tier, individualItems);
+      clearIndividualItems();
+    } else {
+      addBundle(tier);
+    }
     setSelectedTier(tier);
     setActiveBundleIndex(idx);
+    setIsOpen(true);
   };
 
   const handleAddToBundle = (product: Product) => {
