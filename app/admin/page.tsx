@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminFetch } from "@/lib/admin-fetch";
 import Link from "next/link";
 
 interface Stats {
@@ -29,7 +30,7 @@ export default function AdminDashboard() {
       let squareConnected = false;
       let recentOrders = 0;
       try {
-        const catalogRes = await fetch("/api/square/catalog");
+        const catalogRes = await adminFetch("/api/square/catalog");
         const catalogData = await catalogRes.json();
         if (!catalogData.error) {
           squareProducts = catalogData.items?.length || 0;
@@ -38,7 +39,7 @@ export default function AdminDashboard() {
       } catch { /* Square not connected */ }
 
       try {
-        const ordersRes = await fetch("/api/square/orders");
+        const ordersRes = await adminFetch("/api/square/orders");
         const ordersData = await ordersRes.json();
         if (!ordersData.error) {
           recentOrders = ordersData.orders?.length || 0;

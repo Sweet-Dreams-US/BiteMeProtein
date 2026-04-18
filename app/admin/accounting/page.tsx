@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminFetch } from "@/lib/admin-fetch";
 
 interface Order {
   id: string;
@@ -30,7 +31,7 @@ export default function AccountingPage() {
     setLoading(true); setError("");
     try {
       const [ordersRes, costsRes] = await Promise.all([
-        fetch("/api/square/orders"),
+        adminFetch("/api/square/orders"),
         supabase.from("product_enrichments").select("square_catalog_id, cost_per_item_cents"),
       ]);
       const ordersData = await ordersRes.json();

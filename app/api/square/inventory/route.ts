@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
+import { requireAdmin } from "@/lib/admin-auth";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// POST — Set inventory count for a variation
+// POST — Set inventory count for a variation (admin only)
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireAdmin(req);
+  if (unauthorized) return unauthorized;
   try {
     const squareClient = getSquareClient();
     const SQUARE_LOCATION_ID = getLocationId();

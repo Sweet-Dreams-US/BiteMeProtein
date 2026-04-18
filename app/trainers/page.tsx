@@ -196,7 +196,7 @@ export default function TrainersPage() {
                     ))}
                   </ul>
                   <a
-                    href="mailto:bitemeproteinbakery@gmail.com"
+                    href="mailto:haley@bitemeprotein.com"
                     className={`mt-8 inline-flex items-center justify-center py-3 rounded-full text-sm font-bold transition-all text-center ${
                       tier.featured
                         ? "btn-primary w-full"
@@ -227,7 +227,7 @@ export default function TrainersPage() {
               we&apos;ll find the right partnership for you.
             </p>
             <a
-              href="mailto:bitemeproteinbakery@gmail.com"
+              href="mailto:haley@bitemeprotein.com"
               className="inline-flex items-center justify-center bg-white text-burgundy px-8 py-4 rounded-full text-base font-bold hover:bg-cream transition-all hover:scale-105 shadow-lg"
             >
               Contact Us

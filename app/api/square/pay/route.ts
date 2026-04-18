@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
+import { notifyAdminOfOrder } from "@/lib/notifications";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -193,6 +194,36 @@ export async function POST(req: NextRequest) {
     });
 
     const payment = paymentResp.payment;
+
+    // Fire-and-forget admin notification (doesn't block the response)
+    // If email fails, order still succeeds — data lives in Square + Supabase
+    notifyAdminOfOrder({
+      orderId,
+      paymentId: payment?.id,
+      totalCents: Number(totalCents),
+      buyerName: [shippingAddress?.firstName, shippingAddress?.lastName].filter(Boolean).join(" ") || undefined,
+      buyerEmail,
+      buyerPhone,
+      orderType,
+      shippingService,
+      shippingAddress: shippingAddress ? {
+        addressLine1: shippingAddress.addressLine1,
+        addressLine2: shippingAddress.addressLine2,
+        locality: shippingAddress.locality,
+        administrativeDistrictLevel1: shippingAddress.administrativeDistrictLevel1,
+        postalCode: shippingAddress.postalCode,
+      } : undefined,
+      bundles: bundles.map((b) => ({
+        tierName: b.tierName,
+        priceCents: b.priceCents,
+        items: b.items.map((i) => ({ name: i.name, quantity: i.quantity })),
+      })),
+      items: items.map((i) => ({
+        name: i.variationId, // we'd need to look up the name from Square — for now use variationId
+        quantity: i.quantity,
+      })),
+    }).catch(() => { /* already logged inside */ });
+
     return NextResponse.json({
       success: true,
       paymentId: payment?.id,

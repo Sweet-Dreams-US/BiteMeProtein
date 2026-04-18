@@ -72,8 +72,8 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="mailto:bitemeproteinbakery@gmail.com" className="text-cream/50 hover:text-salmon transition-colors text-sm">
-                  bitemeproteinbakery@gmail.com
+                <a href="mailto:haley@bitemeprotein.com" className="text-cream/50 hover:text-salmon transition-colors text-sm">
+                  haley@bitemeprotein.com
                 </a>
               </li>
               <li>

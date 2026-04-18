@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminFetch } from "@/lib/admin-fetch";
 
 interface OrderLineItem {
   name: string;
@@ -56,6 +57,9 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [newOrderToast, setNewOrderToast] = useState(false);
+  const lastOrderIdsRef = useRef<Set<string>>(new Set());
 
   // Fulfillment edit state
   const [editStatus, setEditStatus] = useState("");
@@ -63,16 +67,33 @@ export default function AdminOrders() {
   const [editCarrier, setEditCarrier] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true); setError("");
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError("");
     try {
       const [ordersRes, fulfillRes] = await Promise.all([
-        fetch("/api/square/orders"),
+        adminFetch("/api/square/orders"),
         supabase.from("order_fulfillment").select("*"),
       ]);
       const ordersData = await ordersRes.json();
       if (ordersData.error) throw new Error(ordersData.error);
-      setOrders(ordersData.orders || []);
+      const fetchedOrders: Order[] = ordersData.orders || [];
+
+      // Detect new orders on silent polls — show a toast
+      if (silent && lastOrderIdsRef.current.size > 0) {
+        const newIds = fetchedOrders.filter((o) => !lastOrderIdsRef.current.has(o.id));
+        if (newIds.length > 0) {
+          setNewOrderToast(true);
+          // Play a subtle sound if browser allows
+          try {
+            new Audio("data:audio/wav;base64,UklGRngCAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YVQCAAAAAP8A/wD/AP8A/wD/AP8A/wD/AP8A").play().catch(() => {});
+          } catch { /* ignore */ }
+          setTimeout(() => setNewOrderToast(false), 5000);
+        }
+      }
+      lastOrderIdsRef.current = new Set(fetchedOrders.map((o) => o.id));
+
+      setOrders(fetchedOrders);
 
       if (fulfillRes.data) {
         const map: Record<string, Fulfillment> = {};
@@ -80,10 +101,31 @@ export default function AdminOrders() {
         setFulfillments(map);
       }
     } catch (err: unknown) { setError(err instanceof Error ? err.message : "Failed to load"); }
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, []);
 
+  // Initial fetch
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  // Auto-refresh orders every 60s so Haley sees new orders without clicking Refresh
+  useEffect(() => {
+    const interval = setInterval(() => fetchOrders(true), 60_000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
+
+  // Supabase realtime: auto-sync fulfillment changes made elsewhere
+  // (e.g., Haley updates a shipment from her phone on another session)
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin_fulfillment_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "order_fulfillment" },
+        () => fetchOrders(true)
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchOrders]);
 
   const openOrderDetail = (order: Order) => {
     setSelectedOrder(order);
@@ -130,11 +172,21 @@ export default function AdminOrders() {
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
-  // Filter orders
+  // Filter orders (state + tab + search)
   const completedOrders = orders.filter((o) => o.state === "COMPLETED");
-  const filteredOrders = filterTab === "all"
-    ? completedOrders
-    : completedOrders.filter((o) => getOrderStatus(o) === filterTab);
+  const searchNeedle = search.trim().toLowerCase();
+  const filteredOrders = completedOrders
+    .filter((o) => filterTab === "all" || getOrderStatus(o) === filterTab)
+    .filter((o) => {
+      if (!searchNeedle) return true;
+      const haystack = [
+        o.id,
+        o.source || "",
+        ...o.lineItems.map((li) => li.name || ""),
+        fulfillments[o.id]?.tracking_number || "",
+      ].join(" ").toLowerCase();
+      return haystack.includes(searchNeedle);
+    });
 
   // Stats
   const onlineOrders = completedOrders.filter((o) => o.source && o.source !== "Square Point of Sale");
@@ -145,14 +197,32 @@ export default function AdminOrders() {
 
   return (
     <div className="max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
+      {/* New order toast */}
+      {newOrderToast && (
+        <div className="fixed top-6 right-6 z-50 bg-green-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-in slide-in-from-right">
+          <span className="text-lg">🎉</span>
+          <span className="font-semibold">New order just came in!</span>
+          <button onClick={() => setNewOrderToast(false)} className="text-white/70 hover:text-white ml-2">✕</button>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-[#5a3e36]">Orders & Fulfillment</h2>
-          <p className="text-[#b0a098] text-sm">Track, fulfill, and ship orders</p>
+          <p className="text-[#b0a098] text-sm">Auto-syncs every 60s · Realtime fulfillment changes</p>
         </div>
-        <button onClick={fetchOrders} className="border border-[#e8ddd4] text-[#7a6a62] hover:text-[#5a3e36] px-4 py-2 rounded-xl text-sm font-medium transition-colors">
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search orders…"
+            className="bg-white border border-[#e8ddd4] rounded-xl px-4 py-2 text-sm text-[#5a3e36] placeholder:text-[#c4b5aa] focus:border-[#E8A0BF] focus:ring-1 focus:ring-[#E8A0BF] focus:outline-none"
+          />
+          <button onClick={() => fetchOrders()} className="border border-[#e8ddd4] text-[#7a6a62] hover:text-[#5a3e36] px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl p-3 mb-4">{error}</div>}

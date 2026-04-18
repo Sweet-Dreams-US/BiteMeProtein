@@ -235,7 +235,7 @@ export default function EventsPage() {
                   We love pop-ups and partnerships. Let&apos;s make it happen.
                 </p>
                 <a
-                  href="mailto:bitemeproteinbakery@gmail.com"
+                  href="mailto:haley@bitemeprotein.com"
                   className="btn-primary inline-flex items-center justify-center"
                 >
                   Get in Touch

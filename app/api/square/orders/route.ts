@@ -1,10 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
+import { requireAdmin } from "@/lib/admin-auth";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// GET — List recent orders
-export async function GET() {
+// GET — List recent orders (admin only — contains customer PII)
+export async function GET(req: NextRequest) {
+  const unauthorized = await requireAdmin(req);
+  if (unauthorized) return unauthorized;
   try {
     const squareClient = getSquareClient();
     const SQUARE_LOCATION_ID = getLocationId();

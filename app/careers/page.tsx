@@ -88,7 +88,7 @@ export default function CareersPage() {
                   ))}
                 </div>
 
-                <a href={`mailto:bitemeproteinbakery@gmail.com?subject=Application: ${role.title}`}
+                <a href={`mailto:haley@bitemeprotein.com?subject=Application: ${role.title}`}
                   className="btn-primary">
                   Apply for this Role
                 </a>
@@ -111,7 +111,7 @@ export default function CareersPage() {
             <p className="text-dark/60 mb-8 max-w-md mx-auto">
               We&apos;re always looking for talented people. Send us your info and tell us how you&apos;d make Bite Me better.
             </p>
-            <a href="mailto:bitemeproteinbakery@gmail.com?subject=General Interest"
+            <a href="mailto:haley@bitemeprotein.com?subject=General Interest"
               className="btn-primary text-lg px-10 py-4">
               Get in Touch
             </a>

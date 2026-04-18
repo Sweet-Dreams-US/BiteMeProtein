@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
+import { requireAdmin } from "@/lib/admin-auth";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -75,8 +76,10 @@ export async function GET() {
   }
 }
 
-// POST — Create a new catalog item
+// POST — Create a new catalog item (admin only)
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireAdmin(req);
+  if (unauthorized) return unauthorized;
   try {
     const squareClient = getSquareClient();
     const SQUARE_LOCATION_ID = getLocationId();
@@ -151,8 +154,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PUT — Update a catalog item
+// PUT — Update a catalog item (admin only)
 export async function PUT(req: NextRequest) {
+  const unauthorized = await requireAdmin(req);
+  if (unauthorized) return unauthorized;
   try {
     const squareClient = getSquareClient();
     const SQUARE_LOCATION_ID = getLocationId();
@@ -228,8 +233,10 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// DELETE — Delete a catalog item
+// DELETE — Delete a catalog item (admin only)
 export async function DELETE(req: NextRequest) {
+  const unauthorized = await requireAdmin(req);
+  if (unauthorized) return unauthorized;
   try {
     const squareClient = getSquareClient();
     const SQUARE_LOCATION_ID = getLocationId();

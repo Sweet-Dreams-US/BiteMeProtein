@@ -158,7 +158,7 @@ export default function ReviewsPage() {
 
             <ScrollReveal delay={0.1}>
               <a
-                href="mailto:bitemeproteinbakery@gmail.com?subject=Customer%20Review&body=Hi%20Bite%20Me%20team!%20I%20wanted%20to%20share%20my%20experience..."
+                href="mailto:haley@bitemeprotein.com?subject=Customer%20Review&body=Hi%20Bite%20Me%20team!%20I%20wanted%20to%20share%20my%20experience..."
                 className="card-bakery p-8 text-center block hover:shadow-lg transition-all group"
               >
                 <span className="text-4xl mb-4 block group-hover:scale-110 transition-transform">✍️</span>
@@ -197,7 +197,7 @@ export default function ReviewsPage() {
                   Post on Instagram
                 </a>
                 <a
-                  href="mailto:bitemeproteinbakery@gmail.com?subject=Google%20Review%20Request"
+                  href="mailto:haley@bitemeprotein.com?subject=Google%20Review%20Request"
                   className="btn-secondary"
                 >
                   Leave a Google Review

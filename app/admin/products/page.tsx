@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminFetch } from "@/lib/admin-fetch";
 
 interface Variation {
   id?: string;
@@ -62,7 +63,7 @@ export default function AdminProducts() {
   const fetchProducts = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/square/catalog");
+      const res = await adminFetch("/api/square/catalog");
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setProducts(data.items || []);
@@ -85,7 +86,7 @@ export default function AdminProducts() {
     if (!newProduct.name) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/square/catalog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newProduct) });
+      const res = await adminFetch("/api/square/catalog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newProduct) });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setCreating(false); setNewProduct({ ...emptyProduct }); fetchProducts();
@@ -97,7 +98,7 @@ export default function AdminProducts() {
     if (!editingProduct) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/square/catalog", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      const res = await adminFetch("/api/square/catalog", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         id: editingProduct.id, name: editingProduct.name, description: editingProduct.description,
         variations: editingProduct.variations.map((v) => ({ id: v.id, name: v.name, price: v.priceMoney ? v.priceMoney.amount / 100 : 0, sku: v.sku })),
         trackInventory: editingProduct.variations[0]?.trackInventory ?? false,

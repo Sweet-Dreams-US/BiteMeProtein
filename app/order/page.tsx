@@ -138,7 +138,7 @@ export default function OrderPage() {
     body += `Fulfillment: ${fulfillment === "pickup" ? "Pickup" : "Delivery"}\n`;
     if (specialInstructions) body += `\nSpecial Instructions:\n${specialInstructions}\n`;
 
-    return `mailto:bitemeproteinbakery@gmail.com?subject=${subject}&body=${encodeURIComponent(body)}`;
+    return `mailto:haley@bitemeprotein.com?subject=${subject}&body=${encodeURIComponent(body)}`;
   }
 
   function handleSubmit(e: React.FormEvent) {
