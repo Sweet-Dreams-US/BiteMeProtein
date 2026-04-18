@@ -8,6 +8,7 @@ const footerLinks = {
     { href: "/compare", label: "Compare" },
     { href: "/quiz", label: "Gym Mood Quiz" },
     { href: "/oven", label: "The Oven" },
+    { href: "/track", label: "Track Your Order" },
     { href: "/reviews", label: "Reviews" },
   ],
   company: [

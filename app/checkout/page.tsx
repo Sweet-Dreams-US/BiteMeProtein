@@ -142,9 +142,9 @@ export default function CheckoutPage() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // Success — clear cart and go to confirmation
+      // Success — clear cart and go to confirmation page with order ID
       clearCart();
-      router.push(`/shop?order=success`);
+      router.push(`/order-confirmation?order=${encodeURIComponent(data.orderId || "")}&email=${encodeURIComponent(email)}`);
     } catch (err) {
       setPayError(err instanceof Error ? err.message : "Payment failed");
       setSubmitting(false);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
 import { notifyAdminOfOrder } from "@/lib/notifications";
+import { accumulatePointsForOrder } from "@/lib/loyalty";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -194,6 +195,15 @@ export async function POST(req: NextRequest) {
     });
 
     const payment = paymentResp.payment;
+
+    // Fire-and-forget loyalty accrual (no-ops gracefully if no program configured)
+    if (buyerPhone) {
+      accumulatePointsForOrder({
+        phoneNumber: buyerPhone,
+        orderId,
+        locationId: SQUARE_LOCATION_ID,
+      }).catch(() => { /* already logged inside */ });
+    }
 
     // Fire-and-forget admin notification (doesn't block the response)
     // If email fails, order still succeeds — data lives in Square + Supabase
