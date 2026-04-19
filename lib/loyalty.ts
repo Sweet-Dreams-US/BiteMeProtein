@@ -15,25 +15,32 @@ import crypto from "crypto";
  * accounts on first visit and merges online + in-person POS activity.
  */
 
-// Cache the program ID for a session to avoid repeated lookups
-let cachedProgramId: string | null | undefined = undefined;
+// Cache program ID with a TTL so we don't miss new program activation.
+// 5-min TTL: if Haley sets up loyalty in Square Dashboard, the site
+// picks it up within 5 minutes without a redeploy.
+const PROGRAM_CACHE_TTL_MS = 5 * 60 * 1000;
+let cachedProgramId: string | null = null;
+let cachedProgramExpiresAt = 0;
 
 /**
  * Returns the active loyalty program ID, or null if none is configured.
- * Cached per server instance.
+ * Cached for 5 minutes per server instance.
  */
 export async function getLoyaltyProgramId(): Promise<string | null> {
-  if (cachedProgramId !== undefined) return cachedProgramId;
+  if (Date.now() < cachedProgramExpiresAt) return cachedProgramId;
 
   try {
     const client = getSquareClient();
     const resp: any = await (client.loyalty as any).getProgram({ programId: "main" });
     const id: string | null = resp.program?.id || null;
     cachedProgramId = id;
+    cachedProgramExpiresAt = Date.now() + PROGRAM_CACHE_TTL_MS;
     return id;
   } catch {
-    // NOT_FOUND = no program configured yet; cache the null so we don't hammer the API
+    // NOT_FOUND = no program configured yet; cache the null with shorter TTL
+    // so it self-heals when Haley activates the program
     cachedProgramId = null;
+    cachedProgramExpiresAt = Date.now() + PROGRAM_CACHE_TTL_MS;
     return null;
   }
 }
