@@ -34,7 +34,7 @@ export default function CareersPage() {
         <div className="absolute bottom-8 right-12 w-14 h-14 rounded-full bg-golden/20 animate-float-reverse" />
         <div className="relative max-w-5xl mx-auto px-6 lg:px-8">
           <ScrollReveal>
-            <p className="stamp text-burgundy mb-6">We're Hiring</p>
+            <p className="stamp text-burgundy mb-6">We&apos;re Hiring</p>
           </ScrollReveal>
           <ScrollReveal delay={0.1}>
             <h1 className="font-fun text-burgundy text-5xl md:text-7xl mb-4">
