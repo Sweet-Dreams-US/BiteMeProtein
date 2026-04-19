@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
 import { requireAdmin } from "@/lib/admin-auth";
+import { logError } from "@/lib/log-error";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -26,7 +27,7 @@ export async function GET() {
       }
     }
 
-    let inventoryCounts: Record<string, string> = {};
+    const inventoryCounts: Record<string, string> = {};
     if (variationIds.length > 0) {
       try {
         const invResult = squareClient.inventory.batchGetCounts({
@@ -71,6 +72,10 @@ export async function GET() {
 
     return NextResponse.json({ items: serialized });
   } catch (error: unknown) {
+    await logError(error, {
+      path: "/api/square/catalog:GET",
+      source: "api-route",
+    });
     const message = error instanceof Error ? error.message : "Failed to fetch catalog";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -149,6 +154,10 @@ export async function POST(req: NextRequest) {
       item: created ? { id: created.id, name: created.itemData?.name } : null,
     });
   } catch (error: unknown) {
+    await logError(error, {
+      path: "/api/square/catalog:POST",
+      source: "api-route",
+    });
     const message = error instanceof Error ? error.message : "Failed to create item";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -228,6 +237,10 @@ export async function PUT(req: NextRequest) {
       item: updated ? { id: updated.id, name: updated.itemData?.name } : null,
     });
   } catch (error: unknown) {
+    await logError(error, {
+      path: "/api/square/catalog:PUT",
+      source: "api-route",
+    });
     const message = error instanceof Error ? error.message : "Failed to update item";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -251,6 +264,10 @@ export async function DELETE(req: NextRequest) {
     await squareClient.catalog.object.delete({ objectId: id });
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
+    await logError(error, {
+      path: "/api/square/catalog:DELETE",
+      source: "api-route",
+    });
     const message = error instanceof Error ? error.message : "Failed to delete item";
     return NextResponse.json({ error: message }, { status: 500 });
   }

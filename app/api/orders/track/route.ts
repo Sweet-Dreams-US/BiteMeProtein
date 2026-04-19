@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
 import { createClient } from "@supabase/supabase-js";
+import { logError } from "@/lib/log-error";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -130,6 +131,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(response);
   } catch (err) {
+    await logError(err, {
+      path: "/api/orders/track",
+      source: "api-route",
+    });
     const message = err instanceof Error ? err.message : "Failed to look up order";
     return NextResponse.json({ error: message }, { status: 500 });
   }

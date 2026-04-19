@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
 import { requireAdmin } from "@/lib/admin-auth";
+import { logError } from "@/lib/log-error";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -56,6 +57,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ orders });
   } catch (error: unknown) {
+    await logError(error, {
+      path: "/api/square/orders",
+      source: "api-route",
+    });
     const message = error instanceof Error ? error.message : "Failed to fetch orders";
     return NextResponse.json({ error: message }, { status: 500 });
   }

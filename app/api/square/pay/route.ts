@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
 import { notifyAdminOfOrder } from "@/lib/notifications";
 import { accumulatePointsForOrder } from "@/lib/loyalty";
+import { logError } from "@/lib/log-error";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -202,7 +203,13 @@ export async function POST(req: NextRequest) {
         phoneNumber: buyerPhone,
         orderId,
         locationId: SQUARE_LOCATION_ID,
-      }).catch(() => { /* already logged inside */ });
+      }).catch((err) =>
+        logError(err, {
+          path: "/api/square/pay:accumulatePointsForOrder",
+          source: "api-route",
+          context: { orderId, hasPhone: true },
+        }),
+      );
     }
 
     // Fire-and-forget admin notification (doesn't block the response)
@@ -232,7 +239,13 @@ export async function POST(req: NextRequest) {
         name: i.variationId, // we'd need to look up the name from Square — for now use variationId
         quantity: i.quantity,
       })),
-    }).catch(() => { /* already logged inside */ });
+    }).catch((err) =>
+      logError(err, {
+        path: "/api/square/pay:notifyAdminOfOrder",
+        source: "api-route",
+        context: { orderId },
+      }),
+    );
 
     return NextResponse.json({
       success: true,
@@ -247,6 +260,11 @@ export async function POST(req: NextRequest) {
     const message = squareErrors?.[0]?.detail
       || squareErrors?.[0]?.code
       || (error instanceof Error ? error.message : "Payment failed");
+    await logError(error, {
+      path: "/api/square/pay",
+      source: "api-route",
+      context: { squareErrors: squareErrors ?? null },
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
