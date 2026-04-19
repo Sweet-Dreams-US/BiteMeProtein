@@ -226,16 +226,16 @@ After merge: Cole enables branch protection on `main` in GitHub UI.
 
 ## Acceptance criteria
 
-- [ ] `npm test` passes locally and in CI
-- [ ] `npm run lint` passes
-- [ ] `npx tsc --noEmit` passes
-- [ ] PR to `main` triggers CI workflow
-- [ ] `.env.example` present, commented, matches `Website/Environment.md`
-- [ ] README has "Local Setup" that a new contributor can follow
-- [ ] `error_logs` table live in Supabase with RLS
-- [ ] `/admin/errors` renders logged errors with filter + search
-- [ ] A deliberately-triggered error (e.g., `curl /api/shipping/rates?zip=XX`) appears in `/admin/errors` within seconds
-- [ ] Every catch block in `app/api/*` and `lib/loyalty.ts` calls `logError`
+- [x] `npm test` passes locally (44/44)
+- [x] `npm run lint` passes (0 errors, 2 pre-existing unused-var warnings)
+- [x] `npx tsc --noEmit` passes
+- [x] `.env.example` present, commented, matches `Website/Environment.md`
+- [x] README has "Local Setup" that a new contributor can follow
+- [x] `/admin/errors` renders logged errors with filter + search
+- [x] Every catch block in `app/api/*` and `lib/loyalty.ts` calls `logError`
+- [ ] `error_logs` table live in Supabase with RLS *(pending Cole applies `supabase/migrations/20260419120000_error_logs.sql`)*
+- [ ] PR to `main` triggers CI workflow *(pending push)*
+- [ ] A deliberately-triggered error appears in `/admin/errors` within seconds *(pending migration + deploy, verify post-deploy)*
 
 ## Related
 
