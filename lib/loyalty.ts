@@ -13,6 +13,12 @@ import crypto from "crypto";
  *
  * The universal loyalty key is **phone number** — Square auto-creates
  * accounts on first visit and merges online + in-person POS activity.
+ *
+ * SDK NAVIGATION (Square v44):
+ *   client.loyalty.programs.get({ programId: "main" })
+ *   client.loyalty.accounts.search({ query: { mappings: [...] }})
+ *   client.loyalty.accounts.create({ loyaltyAccount: {...} })
+ *   client.loyalty.accounts.accumulatePoints({...})
  */
 
 // Cache program ID with a TTL so we don't miss new program activation.
@@ -31,14 +37,13 @@ export async function getLoyaltyProgramId(): Promise<string | null> {
 
   try {
     const client = getSquareClient();
-    const resp: any = await (client.loyalty as any).getProgram({ programId: "main" });
+    const resp: any = await client.loyalty.programs.get({ programId: "main" });
     const id: string | null = resp.program?.id || null;
     cachedProgramId = id;
     cachedProgramExpiresAt = Date.now() + PROGRAM_CACHE_TTL_MS;
     return id;
-  } catch {
-    // NOT_FOUND = no program configured yet; cache the null with shorter TTL
-    // so it self-heals when Haley activates the program
+  } catch (err) {
+    console.error("[loyalty] getProgramId failed:", err instanceof Error ? err.message : err);
     cachedProgramId = null;
     cachedProgramExpiresAt = Date.now() + PROGRAM_CACHE_TTL_MS;
     return null;
@@ -60,7 +65,7 @@ export async function findOrCreateLoyaltyAccount(phoneNumber: string): Promise<s
     const client = getSquareClient();
 
     // Search for existing account by phone
-    const searchResp: any = await (client.loyalty as any).searchAccounts({
+    const searchResp: any = await client.loyalty.accounts.search({
       query: {
         mappings: [{ phoneNumber: phone }],
       },
@@ -70,7 +75,7 @@ export async function findOrCreateLoyaltyAccount(phoneNumber: string): Promise<s
     if (existing?.id) return existing.id;
 
     // Create new account
-    const createResp: any = await (client.loyalty as any).createAccount({
+    const createResp: any = await client.loyalty.accounts.create({
       loyaltyAccount: {
         programId,
         mapping: { phoneNumber: phone },
@@ -80,7 +85,7 @@ export async function findOrCreateLoyaltyAccount(phoneNumber: string): Promise<s
 
     return createResp.loyaltyAccount?.id || null;
   } catch (err) {
-    console.error("[loyalty] findOrCreateLoyaltyAccount failed:", err);
+    console.error("[loyalty] findOrCreateLoyaltyAccount failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -99,7 +104,7 @@ export async function accumulatePointsForOrder(params: {
 
   try {
     const client = getSquareClient();
-    const resp: any = await (client.loyalty as any).accumulatePoints({
+    const resp: any = await client.loyalty.accounts.accumulatePoints({
       accountId,
       accumulatePoints: {
         orderId: params.orderId,
@@ -113,7 +118,7 @@ export async function accumulatePointsForOrder(params: {
       ?? resp.events?.[0]?.accumulatePoints?.points
       ?? null;
   } catch (err) {
-    console.error("[loyalty] accumulatePoints failed:", err);
+    console.error("[loyalty] accumulatePoints failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -135,7 +140,7 @@ export async function getLoyaltyBalance(phoneNumber: string): Promise<{
 
   try {
     const client = getSquareClient();
-    const searchResp: any = await (client.loyalty as any).searchAccounts({
+    const searchResp: any = await client.loyalty.accounts.search({
       query: {
         mappings: [{ phoneNumber: phone }],
       },
@@ -150,7 +155,7 @@ export async function getLoyaltyBalance(phoneNumber: string): Promise<{
       accountId: account.id,
     };
   } catch (err) {
-    console.error("[loyalty] getBalance failed:", err);
+    console.error("[loyalty] getBalance failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -169,7 +174,7 @@ export async function getLoyaltyProgram(): Promise<{
 } | null> {
   try {
     const client = getSquareClient();
-    const resp: any = await (client.loyalty as any).getProgram({ programId: "main" });
+    const resp: any = await client.loyalty.programs.get({ programId: "main" });
     const program = resp.program;
     if (!program) return null;
 
@@ -185,7 +190,8 @@ export async function getLoyaltyProgram(): Promise<{
         points: tier.points,
       })),
     };
-  } catch {
+  } catch (err) {
+    console.error("[loyalty] getProgram failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
