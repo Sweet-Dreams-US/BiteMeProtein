@@ -37,6 +37,11 @@ yarn-error.log*
 # local debugging artifacts (screenshots, playwright sessions)
 *.png
 .playwright-mcp/
+# …but these specific icon files belong in the repo (Next.js file-based
+# icon conventions — served at /icon.png, /apple-icon.png, /opengraph-image.png)
+!app/icon.png
+!app/apple-icon.png
+!app/opengraph-image.png
 
 # Supabase CLI temp (per-device, never commit)
 supabase/.temp/

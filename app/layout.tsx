@@ -30,10 +30,33 @@ const anton = Anton({
   weight: ["400"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() || "https://bitemeprotein.com";
+
+// Favicon + OG image files live at app/icon.png, app/apple-icon.png, and
+// app/opengraph-image.png. Next.js auto-emits the correct <link>/<meta>
+// tags from those files — serving at real local paths is what Google's
+// crawler expects and avoids external-URL fetching quirks. We don't set
+// metadata.icons or metadata.openGraph.images here because the file-based
+// conventions take precedence anyway.
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Bite Me Protein Bakery | Dessert... But Make It Protein",
   description:
     "Soft, fresh, high-protein treats that actually taste like dessert. Protein brownies, banana bread, muffins & more. Not your average protein snack.",
+  openGraph: {
+    title: "Bite Me Protein Bakery | Dessert... But Make It Protein",
+    description:
+      "Soft, fresh, high-protein treats that actually taste like dessert. Protein brownies, banana bread, muffins & more.",
+    url: SITE_URL,
+    siteName: "Bite Me Protein Bakery",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Bite Me Protein Bakery",
+    description: "Soft, fresh, high-protein treats that actually taste like dessert.",
+  },
 };
 
 export default function RootLayout({
