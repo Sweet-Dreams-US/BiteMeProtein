@@ -4,7 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    # Run on every PR regardless of target branch so stacked PRs (e.g.
+    # sub-project branches that target an earlier sub-project branch) get
+    # CI validation before merging up the chain.
+    branches: ['**']
 
 jobs:
   test:
