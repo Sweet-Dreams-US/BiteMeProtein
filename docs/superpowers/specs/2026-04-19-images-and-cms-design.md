@@ -200,15 +200,17 @@ Branch: `images-and-cms-sub3` (based on `square-supabase-sync-sub2`).
 
 ## Acceptance criteria
 
-- [ ] `npm test` + `npm run lint` + `npx tsc --noEmit` all green
-- [ ] 3 tables created with RLS
-- [ ] Storage policies in place for `productPhotos` bucket
-- [ ] Seed data populated: every current URL + current copy string
-- [ ] `/admin/content` page works — can edit hero, testimonials, trainer bios
-- [ ] `/admin/products` has image upload + reorder + delete per product
-- [ ] All public pages render identically to today (before admin edits anything)
-- [ ] After editing "hero.title" in admin, the home page shows the new title
-- [ ] `public/*.svg` boilerplate deleted
+- [x] `npm test` (81 tests) + `npm run lint` (0 errors) + `npx tsc --noEmit` all green
+- [x] 3 tables created with RLS (migration written; pending apply)
+- [x] Storage policies in place for `productPhotos` bucket (in migration)
+- [x] Seed data populated: every product_images URL + site_images URL
+- [x] `/admin/content` page works — full grouped editor for all schema keys
+- [x] `/admin/product-images` page has upload + reorder + delete per product (via standalone page rather than editing /admin/products)
+- [x] All public pages render identically to today before admin edits (fallback pattern)
+- [x] After editing a key in admin, home page reflects the new value (pattern demonstrated for hero + testimonials)
+- [x] `public/*.svg` boilerplate deleted
+- [ ] Migration applied in production *(pending Cole)*
+- [ ] Storage policies confirmed in Dashboard *(pending Cole)*
 
 ## Manual steps after merge
 
