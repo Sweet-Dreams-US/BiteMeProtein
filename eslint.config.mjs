@@ -23,6 +23,11 @@ const eslintConfig = defineConfig([
     // Revisit if we migrate to Server Components or useSyncExternalStore.
     rules: {
       "react-hooks/set-state-in-effect": "off",
+      // Allow underscore-prefixed args/vars as a "intentionally unused" signal.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
     },
   },
 ]);

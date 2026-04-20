@@ -1,0 +1,39 @@
+# Supabase CLI config.
+# Full reference: https://supabase.com/docs/guides/local-development/cli/config
+#
+# To apply migrations to your remote Supabase project:
+#   1. npx supabase login                   (one-time, opens browser)
+#   2. npx supabase link --project-ref <id> (one-time, <id> from Supabase dashboard URL)
+#   3. npx supabase db push                 (applies pending migrations)
+#
+# For local dev of migrations before pushing, see:
+#   https://supabase.com/docs/guides/cli/local-development
+
+project_id = "bitemeprotein"
+
+[api]
+enabled = false
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.migrations]
+# Migrations live in supabase/migrations/ by default. Filename convention:
+# <YYYYMMDDHHMMSS>_<snake_case_name>.sql. Create via `npx supabase migration new <name>`.
+
+[studio]
+enabled = false
+
+[storage]
+enabled = false
+
+[auth]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
