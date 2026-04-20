@@ -31,37 +31,31 @@ const anton = Anton({
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() || "https://bitemeprotein.com";
-const SQUARE_LOGO = "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/BusinessAssets/BiteMeSquareLogo.png";
+
+// Favicon + OG image files live at app/icon.png, app/apple-icon.png, and
+// app/opengraph-image.png. Next.js auto-emits the correct <link>/<meta>
+// tags from those files — serving at real local paths is what Google's
+// crawler expects and avoids external-URL fetching quirks. We don't set
+// metadata.icons or metadata.openGraph.images here because the file-based
+// conventions take precedence anyway.
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "Bite Me Protein Bakery | Dessert... But Make It Protein",
   description:
     "Soft, fresh, high-protein treats that actually taste like dessert. Protein brownies, banana bread, muffins & more. Not your average protein snack.",
-  // Browser tab + Google favicon — replaces the Next.js default (Vercel circle).
-  // Using the square Bite Me logo from Supabase Storage.
-  icons: {
-    icon: [{ url: SQUARE_LOGO, type: "image/png" }],
-    shortcut: [{ url: SQUARE_LOGO, type: "image/png" }],
-    apple: [{ url: SQUARE_LOGO, type: "image/png" }],
-  },
-  // Google Search result thumbnail + social sharing card (Facebook, LinkedIn,
-  // iMessage previews, etc.). Google primarily uses og:image for its result
-  // snippets on mobile and for some Discover surfaces.
   openGraph: {
     title: "Bite Me Protein Bakery | Dessert... But Make It Protein",
     description:
       "Soft, fresh, high-protein treats that actually taste like dessert. Protein brownies, banana bread, muffins & more.",
     url: SITE_URL,
     siteName: "Bite Me Protein Bakery",
-    images: [{ url: SQUARE_LOGO, width: 512, height: 512, alt: "Bite Me Protein Bakery" }],
     type: "website",
   },
   twitter: {
     card: "summary",
     title: "Bite Me Protein Bakery",
     description: "Soft, fresh, high-protein treats that actually taste like dessert.",
-    images: [SQUARE_LOGO],
   },
 };
 
