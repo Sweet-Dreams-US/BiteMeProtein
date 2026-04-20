@@ -11,6 +11,7 @@ import ScrollVideo from "@/components/animations/ScrollVideo";
 import { images } from "@/lib/images";
 import { brand } from "@/lib/brand";
 import { useContent } from "@/lib/content";
+import { supabase } from "@/lib/supabase";
 
 
 const HERO_VIDEO = "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/productPhotos/hf_20260404_191224_52bb54af-2a44-49e9-8306-d6e9c97e3d1f.mp4";
@@ -20,6 +21,14 @@ interface Product {
   name: string;
   description: string;
   variations: { id: string; name: string; priceMoney: { amount: number } | null }[];
+}
+
+interface BestSellerCard {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string | null;
+  image_alt: string | null;
 }
 
 const DEFAULT_TESTIMONIALS = [
@@ -33,13 +42,26 @@ const DEFAULT_TESTIMONIALS = [
   "Where has this been all my life?",
 ];
 
-const productImageMap: Record<string, string> = {
-  "Protein Brownies": images.brownieHearts[0],
-  "Blueberry Protein Muffin": images.blueberryMuffin[0],
-  "Chocolate Chip Protein Banana Bread Bites": images.chocChipBananaBread[0],
-  "Raspberry Chocolate Chip Protein Banana Bread Bites": images.rasChocChipBananaBread[0],
-  "Protein Vegan Cookie Dough Truffles": images.chocolateTruffles[0],
-};
+/**
+ * Fuzzy match: does this image slug relate to this product name?
+ * "Protein Brownies" vs slug "brownieHearts" → true (both share "brownie").
+ * Used as a last-resort fallback when admin hasn't linked a slug to a
+ * square_product_id via /admin/product-images yet.
+ */
+function slugMatchesName(name: string, slug: string): boolean {
+  const nameWords = name
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 4);
+  const slugWords = slug
+    .replace(/([A-Z])/g, " $1")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length >= 4);
+  if (nameWords.length === 0 || slugWords.length === 0) return false;
+  return nameWords.some((nw) => slugWords.some((sw) => sw.startsWith(nw) || nw.startsWith(sw)));
+}
 
 function HeroTitle() {
   const [opacity, setOpacity] = useState(1);
@@ -98,42 +120,76 @@ export default function Home() {
     ? testimonialStrings.map((t) => (typeof t === "string" ? t : (t as { quote?: string }).quote ?? ""))
     : DEFAULT_TESTIMONIALS;
 
-  const [bestSellers, setBestSellers] = useState<Product[]>([]);
+  const [bestSellers, setBestSellers] = useState<BestSellerCard[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
-      // Fetch catalog + sales-based ranking in parallel.
+      // 1. Catalog + sales ranking in parallel.
       const [catalogRes, bestRes] = await Promise.all([
         fetch("/api/square/catalog"),
-        fetch("/api/bestsellers?limit=20"),
+        fetch("/api/bestsellers?limit=10"),
       ]);
 
       const catalogData = await catalogRes.json();
-      if (!catalogData.items) return;
+      const catalogItems: Product[] = Array.isArray(catalogData.items) ? catalogData.items : [];
+      const byName = new Map(catalogItems.map((p) => [p.name, p]));
 
-      const withImages: Product[] = catalogData.items.filter(
-        (p: Product) => productImageMap[p.name],
-      );
+      const cards: BestSellerCard[] = [];
 
-      // If sales data exists, order products by units sold desc (real bestsellers).
-      // Products with zero sales fall to the end in catalog order.
-      const ranking: Record<string, number> = {};
+      // 2. If sales data exists, use ranked bestsellers with their image_url.
+      let salesItems: Array<{ name: string; image_url: string | null; image_alt: string | null }> = [];
       try {
         const bestData = await bestRes.json();
         if (bestData.source === "sales" && Array.isArray(bestData.items)) {
-          bestData.items.forEach((row: { name: string; total_sold: number }, i: number) => {
-            ranking[row.name] = bestData.items.length - i; // higher = earlier
-          });
+          salesItems = bestData.items;
         }
-      } catch { /* fall through to catalog order */ }
+      } catch { /* ignore */ }
 
-      const sorted = [...withImages].sort((a, b) => {
-        const aRank = ranking[a.name] ?? -1;
-        const bRank = ranking[b.name] ?? -1;
-        return bRank - aRank;
-      });
+      for (const s of salesItems) {
+        if (cards.length >= 4) break;
+        const cat = byName.get(s.name);
+        cards.push({
+          id: cat?.id ?? s.name,
+          name: s.name,
+          description: cat?.description ?? "",
+          image_url: s.image_url,
+          image_alt: s.image_alt,
+        });
+      }
 
-      setBestSellers(sorted.slice(0, 4));
+      // 3. If we still don't have 4 (empty sales or fewer than 4 ranked
+      //    products), fill from the catalog. For each, try to find a
+      //    product_image via slug fuzzy-match.
+      if (cards.length < 4) {
+        const { data: productImageRows } = await supabase
+          .from("product_images")
+          .select("slug, square_product_id, url, alt, sort_order")
+          .eq("kind", "product")
+          .order("sort_order", { ascending: true });
+
+        const bySlug = new Map<string, { url: string; alt: string | null }>();
+        for (const r of (productImageRows ?? []) as Array<{ slug: string | null; url: string; alt: string | null }>) {
+          if (r.slug && !bySlug.has(r.slug)) bySlug.set(r.slug, { url: r.url, alt: r.alt });
+        }
+
+        const already = new Set(cards.map((c) => c.name));
+        for (const p of catalogItems) {
+          if (cards.length >= 4) break;
+          if (already.has(p.name)) continue;
+          let image_url: string | null = null;
+          let image_alt: string | null = null;
+          for (const [slug, img] of bySlug) {
+            if (slugMatchesName(p.name, slug)) {
+              image_url = img.url;
+              image_alt = img.alt;
+              break;
+            }
+          }
+          cards.push({ id: p.id, name: p.name, description: p.description, image_url, image_alt });
+        }
+      }
+
+      setBestSellers(cards.slice(0, 4));
     } catch { /* ignore */ }
   }, []);
 
@@ -216,10 +272,10 @@ export default function Home() {
               <ScrollReveal key={product.id} delay={i * 0.1}>
                 <Link href={`/shop#product-${product.id}`} className="card-bakery overflow-hidden group block">
                   <div className="aspect-video overflow-hidden relative">
-                    {productImageMap[product.name] ? (
+                    {product.image_url ? (
                       <Image
-                        src={productImageMap[product.name]}
-                        alt={product.name}
+                        src={product.image_url}
+                        alt={product.image_alt ?? product.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-700"
                       />
