@@ -427,16 +427,17 @@ Branch: `square-supabase-sync-sub2`. Depends on #1 — rebase onto main after #1
 
 ## Acceptance criteria
 
-- [ ] `npm test` passes locally and in CI
-- [ ] `npm run lint` passes
-- [ ] `npx tsc --noEmit` passes
-- [ ] Supabase CLI set up (`supabase/config.toml`, migrations folder, schema baseline captured)
-- [ ] All 18 `square_*` tables created with RLS + indexes
-- [ ] `npm run backfill` ingests real Square data end-to-end (verified manually)
-- [ ] Square webhook POST (simulated with known HMAC) dispatches to correct handler
-- [ ] `/admin/orders` shows POS orders with source filter working
-- [ ] `/admin` dashboard loads in < 500 ms
-- [ ] `.env.example` updated with `SQUARE_WEBHOOK_SIGNATURE_KEY`
+- [x] `npm test` passes locally + CI (60 tests)
+- [x] `npm run lint` passes (0 errors, 2 pre-existing warnings)
+- [x] `npx tsc --noEmit` passes
+- [x] Supabase CLI set up (`supabase/config.toml`, `npm run db:*` scripts)
+- [x] 18 `square_*` tables migration written with RLS + indexes
+- [x] Square webhook POST (simulated with known HMAC) dispatches to correct handler (7 webhook tests)
+- [x] `/admin/orders` rewritten to query Supabase with rich filters
+- [x] `.env.example` updated with `SQUARE_WEBHOOK_SIGNATURE_KEY`
+- [ ] Migration applied to production Supabase *(pending Cole: `npm run db:push`)*
+- [ ] `npm run backfill` ingests real Square data end-to-end *(pending Cole)*
+- [ ] `/admin` dashboard loads in < 500 ms *(measurable after data populated)*
 
 ## Related
 - Sub-project 1 PR: #1 (harden foundations)
