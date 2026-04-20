@@ -31,6 +31,7 @@ const navLinks = [
   { href: "/oven", label: "The Oven" },
   { href: "/about", label: "About" },
   { href: "/events", label: "Events" },
+  { href: "/rewards", label: "Rewards" },
   { href: "/trainers", label: "Trainers" },
   { href: "/contact", label: "Contact" },
 ];
