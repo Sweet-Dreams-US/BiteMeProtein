@@ -3,6 +3,7 @@ import { getSquareClient, getLocationId } from "@/lib/square";
 import { notifyAdminOfOrder } from "@/lib/notifications";
 import { accumulatePointsForOrder } from "@/lib/loyalty";
 import { sendOrderConfirmation } from "@/lib/customer-emails";
+import { validateAndApply, recordRedemption } from "@/lib/discount-codes";
 import { logError } from "@/lib/log-error";
 import crypto from "crypto";
 
@@ -39,6 +40,7 @@ interface PayRequest {
   shippingService?: string;
   shippingCostCents?: number;
   verificationToken?: string;
+  promoCode?: string;
 }
 
 /**
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
     const body: PayRequest = await req.json();
     const {
       sourceId,
-      bundles = [],
+      bundles: rawBundles = [],
       items = [],
       buyerEmail,
       buyerPhone,
@@ -69,10 +71,39 @@ export async function POST(req: NextRequest) {
       shippingService,
       shippingCostCents = 0,
       verificationToken,
+      promoCode,
     } = body;
 
     if (!sourceId) {
       return NextResponse.json({ error: "Missing payment token" }, { status: 400 });
+    }
+
+    // Server-authoritative promo-code revalidation. The checkout page
+    // already showed the customer an applied code + savings, but we re-run
+    // the same logic here so nothing about the client's claimed discount
+    // can influence the final charge.
+    let bundles = rawBundles;
+    let appliedDiscount: { id: string; amountCentsSaved: number } | null = null;
+
+    if (promoCode) {
+      const validation = await validateAndApply({
+        code: promoCode,
+        bundles: rawBundles,
+        items,
+        orderType,
+        customerEmail: buyerEmail,
+      });
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: `Promo code not applied: ${validation.reason}` },
+          { status: 400 },
+        );
+      }
+      bundles = validation.adjustedBundles;
+      appliedDiscount = {
+        id: validation.discount.id,
+        amountCentsSaved: validation.amountCentsSaved,
+      };
     }
 
     // Build line items for the order
@@ -197,6 +228,24 @@ export async function POST(req: NextRequest) {
     });
 
     const payment = paymentResp.payment;
+
+    // Fire-and-forget discount redemption record. Only runs if the
+    // promo code validated above.
+    if (appliedDiscount) {
+      const redemptionCtx = { orderId, discountCodeId: appliedDiscount.id };
+      recordRedemption({
+        discountCodeId: appliedDiscount.id,
+        squareOrderId: orderId,
+        customerEmail: buyerEmail,
+        amountCentsSaved: appliedDiscount.amountCentsSaved,
+      }).catch((err) =>
+        logError(err, {
+          path: "/api/square/pay:recordRedemption",
+          source: "api-route",
+          context: redemptionCtx,
+        }),
+      );
+    }
 
     // Fire-and-forget loyalty accrual (no-ops gracefully if no program configured)
     if (buyerPhone) {
