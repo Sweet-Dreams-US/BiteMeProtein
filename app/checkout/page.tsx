@@ -40,6 +40,12 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
+  // Promo code state
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; savingsCents: number; summary: string; label: string } | null>(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoValidating, setPromoValidating] = useState(false);
+
   // Redirect if cart is empty
   useEffect(() => {
     if (isEmpty) router.replace("/shop");
@@ -76,7 +82,92 @@ export default function CheckoutPage() {
   }, [zip, orderType, hasShippableBundle]);
 
   const shippingCostCents = orderType === "shipping" && selectedShipping ? selectedShipping.priceCents : 0;
-  const grandTotal = totalPrice + shippingCostCents;
+  const discountSavingsCents = appliedPromo?.savingsCents ?? 0;
+  const grandTotal = Math.max(0, totalPrice + shippingCostCents - discountSavingsCents);
+
+  // Re-validate applied promo whenever cart / orderType changes — keeps
+  // UI honest if the customer toggles pickup/shipping after applying.
+  useEffect(() => {
+    if (!appliedPromo) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/discounts/validate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            code: appliedPromo.code,
+            bundles: bundles.map((b) => ({
+              tierName: b.tier.name,
+              priceCents: b.tier.price_cents,
+              items: b.items.map((i) => ({ variationId: i.variationId, name: i.name, quantity: i.quantity })),
+            })),
+            items: items.map((i) => ({ variationId: i.variationId, quantity: i.quantity })),
+            orderType,
+            customerEmail: email,
+          }),
+        });
+        const json = await res.json();
+        if (cancelled) return;
+        if (json.valid) {
+          setAppliedPromo({
+            code: appliedPromo.code,
+            savingsCents: json.amountCentsSaved,
+            summary: json.summary,
+            label: json.codeLabel,
+          });
+          setPromoError("");
+        } else {
+          setAppliedPromo(null);
+          setPromoError(json.reason ?? "Code no longer applies");
+        }
+      } catch { /* leave applied promo as-is on network errors */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderType, bundles.length, items.length]);
+
+  const applyPromo = async () => {
+    setPromoError("");
+    setPromoValidating(true);
+    try {
+      const res = await fetch("/api/discounts/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          code: promoInput,
+          bundles: bundles.map((b) => ({
+            tierName: b.tier.name,
+            priceCents: b.tier.price_cents,
+            items: b.items.map((i) => ({ variationId: i.variationId, name: i.name, quantity: i.quantity })),
+          })),
+          items: items.map((i) => ({ variationId: i.variationId, quantity: i.quantity })),
+          orderType,
+          customerEmail: email,
+        }),
+      });
+      const json = await res.json();
+      if (json.valid) {
+        setAppliedPromo({
+          code: promoInput.trim(),
+          savingsCents: json.amountCentsSaved,
+          summary: json.summary,
+          label: json.codeLabel,
+        });
+        setPromoInput("");
+      } else {
+        setPromoError(json.reason ?? "Couldn't apply that code");
+      }
+    } catch {
+      setPromoError("Couldn't reach the server. Try again.");
+    }
+    setPromoValidating(false);
+  };
+
+  const removePromo = () => {
+    setAppliedPromo(null);
+    setPromoError("");
+  };
 
   const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
@@ -136,6 +227,7 @@ export default function CheckoutPage() {
           } : undefined,
           shippingService: selectedShipping?.service,
           shippingCostCents,
+          promoCode: appliedPromo?.code,
         }),
       });
 
@@ -149,7 +241,7 @@ export default function CheckoutPage() {
       setPayError(err instanceof Error ? err.message : "Payment failed");
       setSubmitting(false);
     }
-  }, [bundles, items, email, phone, orderType, address1, address2, city, state, zip, firstName, lastName, selectedShipping, shippingCostCents, clearCart, router]);
+  }, [bundles, items, email, phone, orderType, address1, address2, city, state, zip, firstName, lastName, selectedShipping, shippingCostCents, appliedPromo?.code, clearCart, router]);
 
   if (isEmpty) return null;
 
@@ -251,6 +343,52 @@ export default function CheckoutPage() {
                 )}
               </div>
             )}
+
+            {/* Promo code */}
+            <div className="card-bakery p-6 md:p-8">
+              <h2 className="font-fun text-burgundy text-xl mb-4">Promo code</h2>
+              {appliedPromo ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-green-700 font-semibold text-sm">
+                      ✓ <code className="font-mono">{appliedPromo.code}</code> applied
+                    </p>
+                    <p className="text-green-700 text-xs mt-1">{appliedPromo.label}</p>
+                    <p className="text-green-700/70 text-xs mt-0.5">
+                      {appliedPromo.summary} — save {formatPrice(appliedPromo.savingsCents)}
+                    </p>
+                  </div>
+                  <button onClick={removePromo} className="text-xs text-green-700/60 hover:text-green-800 font-semibold shrink-0">
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Have a code?"
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyPromo(); } }}
+                      className={`${inputClass} flex-1 uppercase`}
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                    />
+                    <button
+                      onClick={applyPromo}
+                      disabled={!promoInput.trim() || promoValidating}
+                      className="shrink-0 px-5 bg-burgundy text-white font-bold rounded-xl hover:bg-burgundy-dark disabled:opacity-50"
+                    >
+                      {promoValidating ? "…" : "Apply"}
+                    </button>
+                  </div>
+                  {promoError && (
+                    <p className="text-red-500 text-xs mt-2">{promoError}</p>
+                  )}
+                </>
+              )}
+            </div>
 
             {/* Card form */}
             <div className="card-bakery p-6 md:p-8">
@@ -359,6 +497,12 @@ export default function CheckoutPage() {
                   <div className="flex justify-between">
                     <span className="text-dark/50">Shipping (FedEx {selectedShipping.service})</span>
                     <span className="text-dark font-semibold">{formatPrice(shippingCostCents)}</span>
+                  </div>
+                )}
+                {appliedPromo && (
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Promo ({appliedPromo.code})</span>
+                    <span className="text-green-700 font-semibold">−{formatPrice(appliedPromo.savingsCents)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
