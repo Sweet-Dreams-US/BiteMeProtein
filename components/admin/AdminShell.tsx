@@ -10,10 +10,12 @@ import { brand } from "@/lib/brand";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/products", label: "Products", icon: "🧁" },
+  { href: "/admin/product-images", label: "Images", icon: "📸" },
   { href: "/admin/bundles", label: "Bundles", icon: "📦" },
   { href: "/admin/events", label: "Events", icon: "📅" },
   { href: "/admin/orders", label: "Orders", icon: "🧾" },
   { href: "/admin/loyalty", label: "Loyalty", icon: "⭐" },
+  { href: "/admin/content", label: "Content", icon: "📝" },
   { href: "/admin/accounting", label: "Accounting", icon: "💰" },
   { href: "/admin/errors", label: "Errors", icon: "🚨" },
 ];
