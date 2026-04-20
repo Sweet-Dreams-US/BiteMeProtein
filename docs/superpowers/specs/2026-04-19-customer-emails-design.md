@@ -150,12 +150,13 @@ Branch: `customer-emails-sub4` (based on sub3). Commits:
 
 ## Acceptance criteria
 
-- [ ] `npm test` + `npm run lint` + `npx tsc --noEmit` green
-- [ ] Checkout fires customer confirmation on success (next to admin email)
-- [ ] Saving fulfillment with `status` change fires matching email (confirmable in Resend logs post-deploy)
-- [ ] Admin modal has auto-send checkbox + resend dropdown
-- [ ] All failures surface at `/admin/errors`
-- [ ] No regression on existing admin-alert email
+- [x] `npm test` (103 tests) + `npm run lint` (0 errors) + `npx tsc --noEmit` green
+- [x] Checkout fires customer confirmation on success (next to admin email)
+- [x] Saving fulfillment with `status` change fires matching email (wiring via /api/admin/customer-email)
+- [x] Admin modal has auto-send checkbox + resend dropdown
+- [x] All failures surface at `/admin/errors` via logError
+- [x] No regression on existing admin-alert email (notifyAdminOfOrder unchanged)
+- [ ] End-to-end confirmation *(pending Cole: merge + smoke test with a real order)*
 
 ## Manual steps after merge
 
