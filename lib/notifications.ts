@@ -5,6 +5,7 @@
  * a single plain-HTML email, fire-and-forget so a notification outage
  * never blocks order completion.
  */
+import { logError } from "@/lib/log-error";
 
 interface OrderNotificationInput {
   orderId: string;
@@ -177,7 +178,12 @@ export async function notifyAdminOfOrder(data: OrderNotificationInput): Promise<
   const fromEmail = process.env.RESEND_FROM_EMAIL?.trim() || "orders@bitemeprotein.com";
 
   if (!apiKey) {
-    console.warn("[notifications] RESEND_API_KEY missing, skipping admin email");
+    await logError("RESEND_API_KEY missing, skipping admin email", {
+      path: "lib/notifications.ts:notifyAdminOfOrder",
+      source: "lib",
+      level: "warn",
+      context: { orderId: data.orderId },
+    });
     return;
   }
 
@@ -199,9 +205,17 @@ export async function notifyAdminOfOrder(data: OrderNotificationInput): Promise<
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error("[notifications] Resend failed:", res.status, errText);
+      await logError(`Resend ${res.status}: ${errText}`, {
+        path: "lib/notifications.ts:notifyAdminOfOrder",
+        source: "lib",
+        context: { orderId: data.orderId, status: res.status },
+      });
     }
   } catch (err) {
-    console.error("[notifications] Resend threw:", err);
+    await logError(err, {
+      path: "lib/notifications.ts:notifyAdminOfOrder",
+      source: "lib",
+      context: { orderId: data.orderId },
+    });
   }
 }

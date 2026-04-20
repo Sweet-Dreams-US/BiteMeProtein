@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getLoyaltyProgram } from "@/lib/loyalty";
+import { logError } from "@/lib/log-error";
 
 /**
  * GET /api/loyalty/program
@@ -16,6 +17,10 @@ export async function GET() {
     }
     return NextResponse.json({ enabled: true, program });
   } catch (err) {
+    await logError(err, {
+      path: "/api/loyalty/program",
+      source: "api-route",
+    });
     const message = err instanceof Error ? err.message : "Failed to load program";
     return NextResponse.json({ error: message }, { status: 500 });
   }

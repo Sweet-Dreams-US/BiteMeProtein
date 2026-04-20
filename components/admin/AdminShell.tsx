@@ -15,6 +15,7 @@ const navItems = [
   { href: "/admin/orders", label: "Orders", icon: "🧾" },
   { href: "/admin/loyalty", label: "Loyalty", icon: "⭐" },
   { href: "/admin/accounting", label: "Accounting", icon: "💰" },
+  { href: "/admin/errors", label: "Errors", icon: "🚨" },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

@@ -1,4 +1,5 @@
 import { getSquareClient } from "@/lib/square";
+import { logError } from "@/lib/log-error";
 import crypto from "crypto";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -43,7 +44,7 @@ export async function getLoyaltyProgramId(): Promise<string | null> {
     cachedProgramExpiresAt = Date.now() + PROGRAM_CACHE_TTL_MS;
     return id;
   } catch (err) {
-    console.error("[loyalty] getProgramId failed:", err instanceof Error ? err.message : err);
+    await logError(err, { path: "lib/loyalty.ts:getLoyaltyProgramId", source: "lib" });
     cachedProgramId = null;
     cachedProgramExpiresAt = Date.now() + PROGRAM_CACHE_TTL_MS;
     return null;
@@ -85,7 +86,10 @@ export async function findOrCreateLoyaltyAccount(phoneNumber: string): Promise<s
 
     return createResp.loyaltyAccount?.id || null;
   } catch (err) {
-    console.error("[loyalty] findOrCreateLoyaltyAccount failed:", err instanceof Error ? err.message : err);
+    await logError(err, {
+      path: "lib/loyalty.ts:findOrCreateLoyaltyAccount",
+      source: "lib",
+    });
     return null;
   }
 }
@@ -118,7 +122,11 @@ export async function accumulatePointsForOrder(params: {
       ?? resp.events?.[0]?.accumulatePoints?.points
       ?? null;
   } catch (err) {
-    console.error("[loyalty] accumulatePoints failed:", err instanceof Error ? err.message : err);
+    await logError(err, {
+      path: "lib/loyalty.ts:accumulatePointsForOrder",
+      source: "lib",
+      context: { orderId: params.orderId, locationId: params.locationId },
+    });
     return null;
   }
 }
@@ -155,7 +163,7 @@ export async function getLoyaltyBalance(phoneNumber: string): Promise<{
       accountId: account.id,
     };
   } catch (err) {
-    console.error("[loyalty] getBalance failed:", err instanceof Error ? err.message : err);
+    await logError(err, { path: "lib/loyalty.ts:getLoyaltyBalance", source: "lib" });
     return null;
   }
 }
@@ -191,7 +199,7 @@ export async function getLoyaltyProgram(): Promise<{
       })),
     };
   } catch (err) {
-    console.error("[loyalty] getProgram failed:", err instanceof Error ? err.message : err);
+    await logError(err, { path: "lib/loyalty.ts:getLoyaltyProgram", source: "lib" });
     return null;
   }
 }

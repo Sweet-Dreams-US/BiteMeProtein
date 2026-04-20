@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLoyaltyBalance, getLoyaltyProgram } from "@/lib/loyalty";
+import { logError } from "@/lib/log-error";
 
 /**
  * GET /api/loyalty/balance?phone=+15551234567
@@ -34,6 +35,10 @@ export async function GET(req: NextRequest) {
       rewardTiers: program.rewardTiers,
     });
   } catch (err) {
+    await logError(err, {
+      path: "/api/loyalty/balance",
+      source: "api-route",
+    });
     const message = err instanceof Error ? err.message : "Failed to look up balance";
     return NextResponse.json({ error: message }, { status: 500 });
   }
