@@ -102,12 +102,38 @@ export default function Home() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch("/api/square/catalog");
-      const data = await res.json();
-      if (data.items) {
-        const withImages = data.items.filter((p: Product) => productImageMap[p.name]);
-        setBestSellers(withImages.slice(0, 4));
-      }
+      // Fetch catalog + sales-based ranking in parallel.
+      const [catalogRes, bestRes] = await Promise.all([
+        fetch("/api/square/catalog"),
+        fetch("/api/bestsellers?limit=20"),
+      ]);
+
+      const catalogData = await catalogRes.json();
+      if (!catalogData.items) return;
+
+      const withImages: Product[] = catalogData.items.filter(
+        (p: Product) => productImageMap[p.name],
+      );
+
+      // If sales data exists, order products by units sold desc (real bestsellers).
+      // Products with zero sales fall to the end in catalog order.
+      const ranking: Record<string, number> = {};
+      try {
+        const bestData = await bestRes.json();
+        if (bestData.source === "sales" && Array.isArray(bestData.items)) {
+          bestData.items.forEach((row: { name: string; total_sold: number }, i: number) => {
+            ranking[row.name] = bestData.items.length - i; // higher = earlier
+          });
+        }
+      } catch { /* fall through to catalog order */ }
+
+      const sorted = [...withImages].sort((a, b) => {
+        const aRank = ranking[a.name] ?? -1;
+        const bRank = ranking[b.name] ?? -1;
+        return bRank - aRank;
+      });
+
+      setBestSellers(sorted.slice(0, 4));
     } catch { /* ignore */ }
   }, []);
 
