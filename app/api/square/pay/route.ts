@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSquareClient, getLocationId } from "@/lib/square";
 import { notifyAdminOfOrder } from "@/lib/notifications";
 import { accumulatePointsForOrder } from "@/lib/loyalty";
+import { sendOrderConfirmation } from "@/lib/customer-emails";
 import { logError } from "@/lib/log-error";
 import crypto from "crypto";
 
@@ -246,6 +247,36 @@ export async function POST(req: NextRequest) {
         context: { orderId },
       }),
     );
+
+    // Fire-and-forget customer confirmation email. sendOrderConfirmation
+    // is a no-op if buyerEmail is missing; failure is logged inside.
+    if (buyerEmail) {
+      const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() || "https://bitemeprotein.com";
+      sendOrderConfirmation({
+        orderId,
+        shortId: orderId.slice(-6).toUpperCase(),
+        buyerEmail,
+        buyerName: [shippingAddress?.firstName, shippingAddress?.lastName].filter(Boolean).join(" ") || undefined,
+        totalCents: Number(totalCents),
+        orderType,
+        items: [
+          ...bundles.flatMap((b) =>
+            b.items.map((i) => ({
+              name: `${b.tierName}: ${i.name}`,
+              quantity: i.quantity,
+            })),
+          ),
+          ...items.map((i) => ({ name: i.variationId, quantity: i.quantity })),
+        ],
+        trackUrl: `${origin}/track?id=${encodeURIComponent(orderId)}&email=${encodeURIComponent(buyerEmail)}`,
+      }).catch((err) =>
+        logError(err, {
+          path: "/api/square/pay:sendOrderConfirmation",
+          source: "api-route",
+          context: { orderId },
+        }),
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -3,8 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/admin-auth";
 import { logError } from "@/lib/log-error";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * /api/admin/content
  *

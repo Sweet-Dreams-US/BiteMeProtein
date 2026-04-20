@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/lib/admin-fetch";
 import { CONTENT_SCHEMA, type ContentKeySpec } from "@/lib/cms-schema";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 interface Row {
   key: string;
   value: unknown;

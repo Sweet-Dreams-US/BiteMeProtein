@@ -80,6 +80,11 @@ export default function AdminOrders() {
   const [editTracking, setEditTracking] = useState("");
   const [editCarrier, setEditCarrier] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [priorStatus, setPriorStatus] = useState("new");
+  const [autoSendEmail, setAutoSendEmail] = useState(true);
+  const [emailAction, setEmailAction] = useState<"" | "preparing" | "shipped" | "delivered" | "confirmation">("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailResult, setEmailResult] = useState<string>("");
 
   // New-order toast
   const [newOrderToast, setNewOrderToast] = useState(false);
@@ -169,10 +174,38 @@ export default function AdminOrders() {
   const openOrderDetail = (order: Order) => {
     setSelectedOrder(order);
     const f = fulfillments[order.id];
-    setEditStatus(f?.status || "new");
+    const current = f?.status || "new";
+    setEditStatus(current);
+    setPriorStatus(current);
     setEditTracking(f?.tracking_number || "");
     setEditCarrier(f?.carrier || "");
     setEditNotes(f?.notes || "");
+    setAutoSendEmail(true);
+    setEmailAction("");
+    setEmailResult("");
+  };
+
+  const sendCustomerEmailFor = async (orderId: string, type: "confirmation" | "preparing" | "shipped" | "delivered") => {
+    setEmailBusy(true);
+    setEmailResult("");
+    try {
+      const res = await adminFetch("/api/admin/customer-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ orderId, type }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setEmailResult(`Error: ${json.error ?? "Send failed"}`);
+      } else if (json.sent === false) {
+        setEmailResult(json.reason ?? "Skipped");
+      } else {
+        setEmailResult(`Sent ${type} email ✓`);
+      }
+    } catch (err) {
+      setEmailResult(err instanceof Error ? err.message : "Send failed");
+    }
+    setEmailBusy(false);
   };
 
   const saveFulfillment = async () => {
@@ -191,6 +224,17 @@ export default function AdminOrders() {
     if (existing) await supabase.from("order_fulfillment").update(data).eq("id", existing.id);
     else await supabase.from("order_fulfillment").insert(data);
     setSaving(false);
+
+    // Auto-send a matching status email if the status changed and auto-send is on.
+    const statusChanged = editStatus !== priorStatus;
+    const isEmailableStatus = editStatus === "preparing" || editStatus === "shipped" || editStatus === "delivered";
+    if (autoSendEmail && statusChanged && isEmailableStatus) {
+      await sendCustomerEmailFor(
+        selectedOrder.id,
+        editStatus as "preparing" | "shipped" | "delivered",
+      );
+    }
+
     setSelectedOrder(null);
     fetchOrders();
   };
@@ -461,10 +505,47 @@ export default function AdminOrders() {
               </div>
 
               <div className="space-y-2 pt-2">
+                <label className="flex items-center gap-2 text-xs text-[#5a3e36] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoSendEmail}
+                    onChange={(e) => setAutoSendEmail(e.target.checked)}
+                    className="w-4 h-4 accent-[#E8A0BF]"
+                  />
+                  <span>Auto-send customer email on status change</span>
+                </label>
+
                 <button onClick={saveFulfillment} disabled={saving}
                   className="w-full bg-[#E8A0BF] text-white py-3 rounded-xl font-bold hover:bg-[#d889ad] disabled:opacity-50">
                   {saving ? "Saving..." : "Save Fulfillment"}
                 </button>
+
+                <div className="flex gap-2">
+                  <select
+                    value={emailAction}
+                    onChange={(e) => setEmailAction(e.target.value as typeof emailAction)}
+                    className="flex-1 bg-white border border-[#e8ddd4] rounded-xl px-3 py-2 text-sm"
+                  >
+                    <option value="">Manually send email…</option>
+                    <option value="confirmation">Order confirmation</option>
+                    <option value="preparing">Preparing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                  </select>
+                  <button
+                    disabled={!emailAction || emailBusy}
+                    onClick={() => emailAction && sendCustomerEmailFor(selectedOrder.id, emailAction)}
+                    className="shrink-0 px-4 py-2 border border-[#e8ddd4] text-[#7a6a62] rounded-xl text-sm font-semibold hover:bg-[#FFF5EE] transition-colors disabled:opacity-40"
+                  >
+                    {emailBusy ? "…" : "Send"}
+                  </button>
+                </div>
+                {emailResult && (
+                  <p className={`text-xs ${emailResult.startsWith("Error") ? "text-red-500" : "text-[#7a6a62]"}`}>
+                    {emailResult}
+                  </p>
+                )}
+
                 <a href={`https://squareup.com/dashboard/orders/overview/${selectedOrder.id}`}
                   target="_blank" rel="noopener noreferrer"
                   className="block w-full text-center border border-[#e8ddd4] text-[#7a6a62] py-2.5 rounded-xl text-sm font-semibold hover:bg-[#FFF5EE] transition-colors">
