@@ -10,17 +10,10 @@ import Marquee from "@/components/animations/Marquee";
 import ScrollVideo from "@/components/animations/ScrollVideo";
 import { images } from "@/lib/images";
 import { brand } from "@/lib/brand";
-import { supabase } from "@/lib/supabase";
+import { useContent } from "@/lib/content";
 
 
 const HERO_VIDEO = "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/productPhotos/hf_20260404_191224_52bb54af-2a44-49e9-8306-d6e9c97e3d1f.mp4";
-
-interface HeroContent {
-  headline: string;
-  subtext: string;
-  cta_primary: string;
-  cta_secondary: string;
-}
 
 interface Product {
   id: string;
@@ -29,7 +22,7 @@ interface Product {
   variations: { id: string; name: string; priceMoney: { amount: number } | null }[];
 }
 
-const testimonials = [
+const DEFAULT_TESTIMONIALS = [
   "Best protein dessert I've ever had.",
   "I don't even like protein bars anymore.",
   "This should be illegal.",
@@ -90,22 +83,24 @@ function HeroTitle() {
 }
 
 export default function Home() {
-  const [hero, setHero] = useState<HeroContent>({
-    headline: "Let Me Be Your Protein Treat Dealer",
-    subtext: "Soft, fresh, high-protein treats that actually taste like dessert. Not your average protein snack.",
-    cta_primary: "Shop Now",
-    cta_secondary: "Take the Quiz",
-  });
+  // Hero copy is editable from /admin/content; fallbacks match the original
+  // hard-coded values, so the page renders identically until Haley edits.
+  const subtext = useContent<string>(
+    "hero.subtitle",
+    "Soft, fresh, high-protein treats that actually taste like dessert. Not your average protein snack.",
+  );
+  const ctaPrimary = useContent<string>("hero.cta_primary", "Shop Now");
+  const ctaSecondary = useContent<string>("hero.cta_secondary", "Take the Quiz");
+  const testimonialStrings = useContent<string[]>("home.testimonials", DEFAULT_TESTIMONIALS);
+
+  // Accept both string[] (legacy) and object[] (richer format) for testimonials.
+  const testimonials: string[] = Array.isArray(testimonialStrings)
+    ? testimonialStrings.map((t) => (typeof t === "string" ? t : (t as { quote?: string }).quote ?? ""))
+    : DEFAULT_TESTIMONIALS;
+
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
 
   const fetchData = useCallback(async () => {
-    const { data: heroData } = await supabase
-      .from("site_content")
-      .select("content")
-      .eq("section", "hero")
-      .single();
-    if (heroData?.content) setHero(heroData.content as unknown as HeroContent);
-
     try {
       const res = await fetch("/api/square/catalog");
       const data = await res.json();
@@ -142,18 +137,18 @@ export default function Home() {
               <ScrollReveal delay={0.1}>
                 <p className="text-white/80 text-sm md:text-base font-medium max-w-sm text-right hidden md:block"
                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.4)" }}>
-                  {hero.subtext}
+                  {subtext}
                 </p>
               </ScrollReveal>
             </div>
             <ScrollReveal delay={0.2}>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/shop" className="bg-white text-burgundy px-8 py-4 rounded-full font-bold text-base hover:bg-cream hover:scale-105 transition-all shadow-lg inline-flex items-center justify-center">
-                  {hero.cta_primary}
+                  {ctaPrimary}
                 </Link>
                 <Link href="/quiz" className="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-base hover:bg-white hover:text-burgundy transition-all inline-flex items-center justify-center"
                       style={{ textShadow: "0 1px 6px rgba(0,0,0,0.3)" }}>
-                  {hero.cta_secondary}
+                  {ctaSecondary}
                 </Link>
               </div>
             </ScrollReveal>

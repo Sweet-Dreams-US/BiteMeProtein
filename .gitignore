@@ -38,6 +38,9 @@ yarn-error.log*
 *.png
 .playwright-mcp/
 
+# Supabase CLI temp (per-device, never commit)
+supabase/.temp/
+
 # vercel
 .vercel
 
