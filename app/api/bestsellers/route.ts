@@ -28,8 +28,6 @@ import { logError } from "@/lib/log-error";
  * default ordering.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 function getServiceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -6,6 +6,23 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import CartButton from "@/components/shop/CartButton";
 import { brand } from "@/lib/brand";
+import { useCurrentCustomer } from "@/lib/customer-auth";
+
+function AccountLink({ onNavigate }: { onNavigate?: () => void }) {
+  const { user, loading } = useCurrentCustomer();
+  if (loading) return null;
+  const href = user ? "/account" : "/account/login";
+  const label = user ? "Account" : "Sign in";
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className="text-dark/70 hover:text-burgundy transition-colors text-sm font-semibold uppercase tracking-wider"
+    >
+      {label}
+    </Link>
+  );
+}
 
 const navLinks = [
   { href: "/shop", label: "Shop" },
@@ -66,6 +83,7 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <AccountLink />
           </div>
 
           {/* Cart + CTA + Mobile */}
@@ -119,6 +137,7 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <AccountLink onNavigate={() => setMobileOpen(false)} />
               <Link
                 href="/shop"
                 onClick={() => setMobileOpen(false)}
