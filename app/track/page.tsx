@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
+import { useCurrentCustomer } from "@/lib/customer-auth";
 
 interface TrackedOrder {
   orderId: string;
@@ -50,6 +51,7 @@ interface LoyaltyInfo {
 function TrackPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useCurrentCustomer();
 
   const [orderId, setOrderId] = useState(searchParams.get("id") || "");
   const [email, setEmail] = useState(searchParams.get("email") || "");
@@ -58,6 +60,14 @@ function TrackPageContent() {
   const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [loyalty, setLoyalty] = useState<LoyaltyInfo | null>(null);
   const [phoneInput, setPhoneInput] = useState("");
+  const autoLookedUpRef = useRef(false);
+
+  // Signed-in customer: pre-fill email once we know who they are, so they
+  // don't have to re-type it. If they also arrived with ?id= in the URL,
+  // auto-lookup on their behalf.
+  useEffect(() => {
+    if (user?.email && !email) setEmail(user.email);
+  }, [user, email]);
 
   const handleLookup = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -81,6 +91,18 @@ function TrackPageContent() {
       setLoading(false);
     }
   };
+
+  // Auto-lookup when we have both id (from URL) and email (from URL or auth)
+  // — saves signed-in customers from clicking through a form whose inputs
+  // are already filled.
+  useEffect(() => {
+    if (autoLookedUpRef.current) return;
+    if (!orderId.trim() || !email.trim()) return;
+    if (order || loading) return;
+    autoLookedUpRef.current = true;
+    handleLookup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, email]);
 
   const lookupLoyalty = async (phone: string) => {
     if (!phone.trim()) return;
