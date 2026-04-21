@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Maps a small query DSL onto an in-memory data structure.
 interface Store {
   pickup_schedule: Array<{ day_of_week: number; is_open: boolean; open_time: string | null; close_time: string | null }>;
+  pickup_schedule_ranges: Array<{ id: string; day_of_week: number; open_time: string; close_time: string; sort_order: number }>;
   pickup_settings: {
     slot_duration_minutes: number;
     allow_same_day: boolean;
@@ -17,6 +18,7 @@ interface Store {
 
 const store: Store = {
   pickup_schedule: [],
+  pickup_schedule_ranges: [],
   pickup_settings: {
     slot_duration_minutes: 8,
     allow_same_day: true,
@@ -87,6 +89,7 @@ beforeEach(() => {
     { day_of_week: 5, is_open: true, open_time: "10:00:00", close_time: "18:00:00" },
     { day_of_week: 6, is_open: true, open_time: "10:00:00", close_time: "18:00:00" },
   ];
+  store.pickup_schedule_ranges = [];
   store.pickup_closures = [];
   store.pickup_reservations = [];
   store.pickup_settings = {
@@ -151,6 +154,24 @@ describe("getSlotsForDate", () => {
     // 10:00 has just passed (we're AT 10:00) — available === false, reason=past or closed
     const slot = day.slots[0];
     expect(slot.available).toBe(false);
+  });
+
+  it("uses pickup_schedule_ranges when present and skips gaps between ranges", async () => {
+    // Split shift: Tuesday (day 2) opens 10-12, closes for lunch, reopens 14-16.
+    store.pickup_schedule_ranges = [
+      { id: "r1", day_of_week: 2, open_time: "10:00:00", close_time: "12:00:00", sort_order: 0 },
+      { id: "r2", day_of_week: 2, open_time: "14:00:00", close_time: "16:00:00", sort_order: 1 },
+    ];
+    const day = await getSlotsForDate("2026-05-05", REFERENCE_NOW); // Tuesday
+    // 2h morning + 2h afternoon = 4h = 240min / 8 = 30 slots
+    expect(day.slots.length).toBe(30);
+    // Verify a 12:00–14:00 slot is absent
+    const lunchSlot = day.slots.find(s => s.timeKey === "12:00");
+    expect(lunchSlot).toBeUndefined();
+    // 13:52 should also NOT be there
+    expect(day.slots.find(s => s.timeKey === "13:52")).toBeUndefined();
+    // But 14:00 should be there (start of afternoon range)
+    expect(day.slots.find(s => s.timeKey === "14:00")?.available).toBe(true);
   });
 });
 

@@ -18,13 +18,19 @@ interface ProductCost {
   cost_per_item_cents: number;
 }
 
-type Period = "7d" | "30d" | "90d" | "all";
+type Period = "7d" | "30d" | "90d" | "all" | "custom";
+type SourceFilter = "all" | "online" | "in-person";
+type StatusFilter = "completed" | "all";
 
 export default function AccountingPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [costs, setCosts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>("30d");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("completed");
   const [error, setError] = useState("");
 
   const fetchData = useCallback(async () => {
@@ -49,12 +55,33 @@ export default function AccountingPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Filter by period
+  // Filter by period, source, and status. Custom period reads from/to dates;
+  // preset periods (7d/30d/90d/all) use a rolling window from "now".
   const now = Date.now();
-  const periodMs: Record<Period, number> = { "7d": 7 * 86400000, "30d": 30 * 86400000, "90d": 90 * 86400000, "all": now };
+  const periodMs: Record<Exclude<Period, "custom">, number> = {
+    "7d": 7 * 86400000,
+    "30d": 30 * 86400000,
+    "90d": 90 * 86400000,
+    "all": Number.MAX_SAFE_INTEGER,
+  };
+  const customFromMs = fromDate ? new Date(fromDate).getTime() : 0;
+  const customToMs = toDate ? new Date(toDate).getTime() + 86400000 - 1 : Number.MAX_SAFE_INTEGER;
+
   const filteredOrders = orders.filter((o) => {
-    if (o.state !== "COMPLETED") return false;
+    // Status filter
+    if (statusFilter === "completed" && o.state !== "COMPLETED") return false;
+
+    // Source filter — "online" = anything NOT "Square Point of Sale"
+    const src = o.source ?? "";
+    const isPos = !src || src === "Square Point of Sale";
+    if (sourceFilter === "online" && isPos) return false;
+    if (sourceFilter === "in-person" && !isPos) return false;
+
+    // Date filter
     const orderTime = new Date(o.createdAt).getTime();
+    if (period === "custom") {
+      return orderTime >= customFromMs && orderTime <= customToMs;
+    }
     return now - orderTime <= periodMs[period];
   });
 
@@ -109,15 +136,61 @@ export default function AccountingPage() {
           <h2 className="text-xl font-bold text-[#5a3e36]">Accounting</h2>
           <p className="text-[#b0a098] text-sm">Revenue, costs, and profit tracking</p>
         </div>
-        <div className="flex gap-1 bg-[#FFF5EE] rounded-xl p-1">
-          {(["7d", "30d", "90d", "all"] as Period[]).map((p) => (
-            <button key={p} onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${period === p ? "bg-white text-[#5a3e36] shadow-sm" : "text-[#b0a098] hover:text-[#7a6a62]"}`}>
-              {p === "all" ? "All" : p}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex gap-1 bg-[#FFF5EE] rounded-xl p-1">
+            {(["7d", "30d", "90d", "all", "custom"] as Period[]).map((p) => (
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${period === p ? "bg-white text-[#5a3e36] shadow-sm" : "text-[#b0a098] hover:text-[#7a6a62]"}`}>
+                {p === "all" ? "All" : p === "custom" ? "Custom" : p}
+              </button>
+            ))}
+          </div>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}
+            className="bg-[#FFF5EE] rounded-xl px-3 py-1.5 text-xs font-bold text-[#5a3e36] border border-[#f0e6de] focus:outline-none focus:border-[#E8A0BF]"
+          >
+            <option value="all">All sources</option>
+            <option value="online">Online only</option>
+            <option value="in-person">In-person only</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            className="bg-[#FFF5EE] rounded-xl px-3 py-1.5 text-xs font-bold text-[#5a3e36] border border-[#f0e6de] focus:outline-none focus:border-[#E8A0BF]"
+          >
+            <option value="completed">Completed only</option>
+            <option value="all">All statuses</option>
+          </select>
         </div>
       </div>
+
+      {period === "custom" && (
+        <div className="flex flex-wrap gap-2 items-center mb-4 bg-white rounded-xl p-3 border border-[#f0e6de]">
+          <label className="text-xs font-bold text-[#7a6a62]">From</label>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="bg-[#FFF9F4] border border-[#e8ddd4] rounded-lg px-3 py-1.5 text-sm text-[#5a3e36] focus:outline-none focus:border-[#E8A0BF]"
+          />
+          <label className="text-xs font-bold text-[#7a6a62]">To</label>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="bg-[#FFF9F4] border border-[#e8ddd4] rounded-lg px-3 py-1.5 text-sm text-[#5a3e36] focus:outline-none focus:border-[#E8A0BF]"
+          />
+          {(fromDate || toDate) && (
+            <button
+              onClick={() => { setFromDate(""); setToDate(""); }}
+              className="text-xs text-[#843430] font-bold hover:underline ml-2"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {error && <div className="bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl p-3 mb-4">{error}</div>}
 

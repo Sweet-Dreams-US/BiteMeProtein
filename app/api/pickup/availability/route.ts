@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       { auth: { persistSession: false, autoRefreshToken: false } },
     );
 
-    const { schedule, settings } = await loadPickupConfig(supabase);
+    const { schedule, ranges, settings } = await loadPickupConfig(supabase);
 
     // Range for the whole window, used by both closure + reservation fetches.
     const windowStart = new Date(now.getTime());
@@ -80,13 +80,24 @@ export async function GET(req: NextRequest) {
       const closureReason = closures.get(dateStr) ?? undefined;
       const isOpen = !isClosure && !!day?.is_open;
 
+      // Sum capacity across all configured ranges for this day (split shifts
+      // each contribute their own slots). Falls back to the legacy single
+      // open_time/close_time when no ranges exist yet.
       let slotCount = 0;
       let hasAnyAvailable = false;
-      if (isOpen && day?.open_time && day?.close_time) {
-        const [openH, openM] = day.open_time.split(":").map(Number);
-        const [closeH, closeM] = day.close_time.split(":").map(Number);
-        const mins = (closeH * 60 + closeM) - (openH * 60 + openM);
-        slotCount = Math.max(0, Math.floor(mins / settings.slot_duration_minutes));
+      if (isOpen) {
+        const dayRanges = ranges.get(dow) ?? [];
+        const rangeList = dayRanges.length > 0
+          ? dayRanges.map(r => ({ open: r.open_time, close: r.close_time }))
+          : (day?.open_time && day?.close_time
+            ? [{ open: day.open_time, close: day.close_time }]
+            : []);
+        for (const r of rangeList) {
+          const [openH, openM] = r.open.split(":").map(Number);
+          const [closeH, closeM] = r.close.split(":").map(Number);
+          const mins = (closeH * 60 + closeM) - (openH * 60 + openM);
+          slotCount += Math.max(0, Math.floor(mins / settings.slot_duration_minutes));
+        }
         const reserved = reservedByDate.get(dateStr) ?? 0;
         hasAnyAvailable = slotCount > reserved;
       }
