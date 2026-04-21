@@ -58,6 +58,9 @@ export default function CheckoutPage() {
   // Payment state
   const [submitting, setSubmitting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  // Tracks successful payment so the "empty cart → /shop" redirect below
+  // doesn't race against router.push("/order-confirmation") after clearCart.
+  const [paymentSucceeded, setPaymentSucceeded] = useState(false);
 
   // One stable idempotency key per checkout attempt. Ref so changes don't
   // trigger re-renders; initialized lazily in useEffect (browser-only).
@@ -72,10 +75,13 @@ export default function CheckoutPage() {
   const [promoError, setPromoError] = useState("");
   const [promoValidating, setPromoValidating] = useState(false);
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty — but NOT right after a successful payment,
+  // because clearCart() empties the cart while router.push("/order-
+  // confirmation") is still in flight. Without this guard, the post-
+  // payment customer bounces to /shop and never sees the confirmation.
   useEffect(() => {
-    if (isEmpty) router.replace("/shop");
-  }, [isEmpty, router]);
+    if (isEmpty && !paymentSucceeded) router.replace("/shop");
+  }, [isEmpty, paymentSucceeded, router]);
 
   // Fetch shipping rates when ZIP is complete and order type is shipping
   useEffect(() => {
@@ -264,6 +270,9 @@ export default function CheckoutPage() {
       // Success — clear the idempotency key so the customer's *next*
       // checkout attempt gets a fresh one, then clear cart + redirect.
       try { window.sessionStorage.removeItem(IDEMPOTENCY_STORAGE_KEY); } catch { /* ignore */ }
+      // Set BEFORE clearCart so the empty-cart effect sees this flag and
+      // doesn't steal the navigation with router.replace("/shop").
+      setPaymentSucceeded(true);
       clearCart();
       router.push(`/order-confirmation?order=${encodeURIComponent(data.orderId || "")}&email=${encodeURIComponent(email)}`);
     } catch (err) {
