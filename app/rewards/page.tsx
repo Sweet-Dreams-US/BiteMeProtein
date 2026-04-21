@@ -96,9 +96,16 @@ export default function RewardsPage() {
       : (result.terminology?.other ?? "Points").toLowerCase();
   };
 
+  // Sort tiers ascending by points so the progression reads naturally and
+  // `nextTier` picks the nearest unlocked one. Square's API returns tiers
+  // in creation order, which isn't necessarily points-ascending.
+  const sortedTiers = result?.found
+    ? [...result.rewardTiers].sort((a, b) => a.points - b.points)
+    : [];
+
   const nextTier =
     result?.found
-      ? result.rewardTiers.find((t) => t.points > result.points) ?? null
+      ? sortedTiers.find((t) => t.points > result.points) ?? null
       : null;
   const inputClass =
     "w-full bg-[#FFF9F4] border border-[#e8ddd4] rounded-xl px-4 py-3 text-dark placeholder:text-dark/30 focus:outline-none focus:border-[#E8A0BF] focus:ring-2 focus:ring-[#E8A0BF]/20 transition-all";
@@ -176,11 +183,11 @@ export default function RewardsPage() {
               </div>
 
               {/* Tiers */}
-              {result.rewardTiers.length > 0 && (
+              {sortedTiers.length > 0 && (
                 <div className="mt-6">
                   <p className="text-xs font-bold uppercase tracking-wider text-dark/50 mb-3">Reward tiers</p>
                   <ul className="space-y-2">
-                    {result.rewardTiers.map((t) => {
+                    {sortedTiers.map((t) => {
                       const unlocked = result.points >= t.points;
                       const progress = Math.min(100, (result.points / t.points) * 100);
                       return (

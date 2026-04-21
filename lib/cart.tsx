@@ -1,31 +1,10 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import type { CartItem, BundleTier, CartBundle } from "./cart-types";
+import { readStoredCart, writeStoredCart, clearStoredCart } from "./cart-storage";
 
-export interface CartItem {
-  productId: string;
-  variationId: string;
-  name: string;
-  variationName: string;
-  price: number; // in cents (individual price)
-  quantity: number;
-  image?: string;
-}
-
-export interface BundleTier {
-  id: string;
-  name: string;
-  item_count: number;
-  price_cents: number;
-  shipping_eligible: boolean;
-  pickup_only: boolean;
-  shipping_cost_cents?: number;
-}
-
-export interface CartBundle {
-  tier: BundleTier;
-  items: CartItem[]; // items selected for this bundle
-}
+export type { CartItem, BundleTier, CartBundle };
 
 interface CartContextType {
   // Bundle mode
@@ -57,9 +36,33 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  // Start empty so SSR and initial client render match (avoids hydration
+  // mismatch). Hydrate from localStorage on first client effect.
   const [bundles, setBundles] = useState<CartBundle[]>([]);
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Restore from localStorage on mount (client-only)
+  useEffect(() => {
+    const stored = readStoredCart();
+    if (stored) {
+      setBundles(stored.bundles);
+      setItems(stored.items);
+    }
+    setHydrated(true);
+  }, []);
+
+  // Persist on every change (post-hydration). Skip the first render before
+  // hydration completes to avoid clobbering stored state with an empty cart.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (bundles.length === 0 && items.length === 0) {
+      clearStoredCart();
+    } else {
+      writeStoredCart({ bundles, items });
+    }
+  }, [bundles, items, hydrated]);
 
   // Bundle operations
   const addBundle = useCallback((tier: BundleTier) => {
@@ -157,6 +160,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = useCallback(() => {
     setBundles([]);
     setItems([]);
+    clearStoredCart();
   }, []);
 
   const clearIndividualItems = useCallback(() => {

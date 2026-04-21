@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Playfair_Display, Love_Ya_Like_A_Sister, Anton } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { CartProvider } from "@/lib/cart";
@@ -76,6 +77,7 @@ export default function RootLayout({
           <Footer />
           <CartDrawer />
         </CartProvider>
+        <Analytics />
       </body>
     </html>
   );

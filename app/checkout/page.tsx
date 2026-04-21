@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { PaymentForm, CreditCard } from "react-square-web-payments-sdk";
 import { useCart } from "@/lib/cart";
@@ -9,6 +9,25 @@ import Link from "next/link";
 interface ShippingOption {
   service: string;
   priceCents: number;
+}
+
+const IDEMPOTENCY_STORAGE_KEY = "bmp_checkout_idempotency_v1";
+
+// Generate (or reuse) a UUID scoped to this checkout attempt. The key
+// survives page reloads via sessionStorage so a customer who double-clicks
+// Pay or refreshes mid-payment cannot create two Square orders. Cleared on
+// successful checkout (via clearCart → clears sessionStorage too).
+function getOrCreateIdempotencyKey(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const existing = window.sessionStorage.getItem(IDEMPOTENCY_STORAGE_KEY);
+    if (existing) return existing;
+    const fresh = crypto.randomUUID();
+    window.sessionStorage.setItem(IDEMPOTENCY_STORAGE_KEY, fresh);
+    return fresh;
+  } catch {
+    return crypto.randomUUID();
+  }
 }
 
 export default function CheckoutPage() {
@@ -39,6 +58,13 @@ export default function CheckoutPage() {
   // Payment state
   const [submitting, setSubmitting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+
+  // One stable idempotency key per checkout attempt. Ref so changes don't
+  // trigger re-renders; initialized lazily in useEffect (browser-only).
+  const idempotencyKey = useRef<string>("");
+  useEffect(() => {
+    idempotencyKey.current = getOrCreateIdempotencyKey();
+  }, []);
 
   // Promo code state
   const [promoInput, setPromoInput] = useState("");
@@ -228,13 +254,16 @@ export default function CheckoutPage() {
           shippingService: selectedShipping?.service,
           shippingCostCents,
           promoCode: appliedPromo?.code,
+          idempotencyKey: idempotencyKey.current || undefined,
         }),
       });
 
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // Success — clear cart and go to confirmation page with order ID
+      // Success — clear the idempotency key so the customer's *next*
+      // checkout attempt gets a fresh one, then clear cart + redirect.
+      try { window.sessionStorage.removeItem(IDEMPOTENCY_STORAGE_KEY); } catch { /* ignore */ }
       clearCart();
       router.push(`/order-confirmation?order=${encodeURIComponent(data.orderId || "")}&email=${encodeURIComponent(email)}`);
     } catch (err) {

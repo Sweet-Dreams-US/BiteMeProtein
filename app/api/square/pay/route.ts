@@ -5,7 +5,7 @@ import { accumulatePointsForOrder } from "@/lib/loyalty";
 import { sendOrderConfirmation } from "@/lib/customer-emails";
 import { validateAndApply, recordRedemption } from "@/lib/discount-codes";
 import { logError } from "@/lib/log-error";
-import crypto from "crypto";
+import { deriveIdempotencyKeys } from "@/lib/idempotency";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -41,6 +41,10 @@ interface PayRequest {
   shippingCostCents?: number;
   verificationToken?: string;
   promoCode?: string;
+  // Client-generated UUID that stays stable across retries of one checkout
+  // attempt. Derived into per-call keys server-side so a double-click or
+  // network retry can't create a duplicate charge. See checkout/page.tsx.
+  idempotencyKey?: string;
 }
 
 /**
@@ -72,11 +76,14 @@ export async function POST(req: NextRequest) {
       shippingCostCents = 0,
       verificationToken,
       promoCode,
+      idempotencyKey,
     } = body;
 
     if (!sourceId) {
       return NextResponse.json({ error: "Missing payment token" }, { status: 400 });
     }
+
+    const idemKeys = deriveIdempotencyKeys(idempotencyKey);
 
     // Server-authoritative promo-code revalidation. The checkout page
     // already showed the customer an applied code + savings, but we re-run
@@ -185,7 +192,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Create the order
     const orderResp: any = await (squareClient.orders as any).create({
-      idempotencyKey: crypto.randomUUID(),
+      idempotencyKey: idemKeys.order,
       order: {
         locationId: SQUARE_LOCATION_ID,
         lineItems,
@@ -202,7 +209,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Charge the card referencing the order
     const paymentResp: any = await (squareClient.payments as any).create({
-      idempotencyKey: crypto.randomUUID(),
+      idempotencyKey: idemKeys.payment,
       sourceId,
       locationId: SQUARE_LOCATION_ID,
       orderId,
