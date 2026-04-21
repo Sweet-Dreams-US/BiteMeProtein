@@ -17,7 +17,6 @@ const navItems = [
   { href: "/admin/pickup-schedule", label: "Pickup Hours", icon: "🕐" },
   { href: "/admin/loyalty", label: "Loyalty", icon: "⭐" },
   { href: "/admin/discounts", label: "Discounts", icon: "🎟️" },
-  { href: "/admin/content", label: "Content", icon: "📝" },
   { href: "/admin/accounting", label: "Accounting", icon: "💰" },
   { href: "/admin/errors", label: "Errors", icon: "🚨" },
 ];

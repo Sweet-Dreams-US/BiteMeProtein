@@ -17,8 +17,16 @@ export const BAKERY_TZ = "America/New_York";
 export interface PickupScheduleDay {
   day_of_week: number;
   is_open: boolean;
-  open_time: string | null;   // "HH:MM:SS"
+  open_time: string | null;   // "HH:MM:SS" — legacy single range (still used as fallback)
   close_time: string | null;
+}
+
+export interface PickupScheduleRange {
+  id: string;
+  day_of_week: number;
+  open_time: string;
+  close_time: string;
+  sort_order: number;
 }
 
 export interface PickupSettings {
@@ -141,17 +149,29 @@ function formatTimeKey(d: Date): string {
 
 export async function loadPickupConfig(sb?: SupabaseClient): Promise<{
   schedule: Map<number, PickupScheduleDay>;
+  ranges: Map<number, PickupScheduleRange[]>;
   settings: PickupSettings;
 }> {
   const supabase = sb ?? getServiceClient();
-  const [scheduleResp, settingsResp] = await Promise.all([
+  const [scheduleResp, rangesResp, settingsResp] = await Promise.all([
     supabase.from("pickup_schedule").select("*"),
+    supabase.from("pickup_schedule_ranges").select("*").order("sort_order"),
     supabase.from("pickup_settings").select("*").eq("id", 1).maybeSingle(),
   ]);
 
   const schedule = new Map<number, PickupScheduleDay>();
   for (const row of (scheduleResp.data ?? []) as PickupScheduleDay[]) {
     schedule.set(row.day_of_week, row);
+  }
+
+  // Group ranges by day. Days can have 0+ ranges — empty means fall back to
+  // the legacy single (open_time, close_time) on pickup_schedule if both are
+  // set, so upgrading doesn't lose existing hours mid-migration.
+  const ranges = new Map<number, PickupScheduleRange[]>();
+  for (const row of (rangesResp.data ?? []) as PickupScheduleRange[]) {
+    const arr = ranges.get(row.day_of_week) ?? [];
+    arr.push(row);
+    ranges.set(row.day_of_week, arr);
   }
 
   const settings: PickupSettings = settingsResp.data ?? {
@@ -162,7 +182,26 @@ export async function loadPickupConfig(sb?: SupabaseClient): Promise<{
     max_days_ahead: 14,
   };
 
-  return { schedule, settings };
+  return { schedule, ranges, settings };
+}
+
+/**
+ * Returns the ordered list of open [open_time, close_time] ranges for a
+ * given day-of-week. Prefers the new pickup_schedule_ranges; falls back
+ * to the legacy single range on pickup_schedule if ranges is empty.
+ */
+function rangesForDay(
+  day: PickupScheduleDay | undefined,
+  ranges: PickupScheduleRange[] | undefined,
+): Array<{ open: string; close: string }> {
+  if (!day?.is_open) return [];
+  if (ranges && ranges.length > 0) {
+    return ranges.map(r => ({ open: r.open_time, close: r.close_time }));
+  }
+  if (day.open_time && day.close_time) {
+    return [{ open: day.open_time, close: day.close_time }];
+  }
+  return [];
 }
 
 async function loadReservedTimesForDate(
@@ -197,11 +236,12 @@ export async function getSlotsForDate(
   sb?: SupabaseClient,
 ): Promise<PickupDayAvailability> {
   const supabase = sb ?? getServiceClient();
-  const { schedule, settings } = await loadPickupConfig(supabase);
+  const { schedule, ranges, settings } = await loadPickupConfig(supabase);
 
   const probe = localDateTimeToUtc(dateStr, "12:00:00");
   const dow = getLocalDayOfWeek(probe);
   const day = schedule.get(dow);
+  const dayRanges = rangesForDay(day, ranges.get(dow));
   const closure = await loadClosure(dateStr, supabase);
 
   if (closure) {
@@ -215,53 +255,64 @@ export async function getSlotsForDate(
     };
   }
 
-  if (!day?.is_open || !day.open_time || !day.close_time) {
+  if (dayRanges.length === 0) {
     return { date: dateStr, isOpen: false, isClosure: false, slots: [], hasAnyAvailable: false };
   }
 
-  const openUtc = localDateTimeToUtc(dateStr, day.open_time);
-  const closeUtc = localDateTimeToUtc(dateStr, day.close_time);
   const slotMs = settings.slot_duration_minutes * 60 * 1000;
-
   const reserved = await loadReservedTimesForDate(dateStr, supabase);
   const isToday = dateStr === formatLocalDate(now);
 
+  // Generate slots for EACH open range and concatenate. Between ranges
+  // (e.g., 12-2pm lunch break) no slots exist — customer can't book those
+  // times. We dedupe across range boundaries just in case a misconfigured
+  // schedule has overlapping ranges.
   const slots: PickupSlot[] = [];
-  for (let t = openUtc.getTime(); t < closeUtc.getTime(); t += slotMs) {
-    const slotDate = new Date(t);
-    const iso = slotDate.toISOString();
-    const slotKey = formatTimeKey(slotDate);
+  const seenIso = new Set<string>();
+  for (const range of dayRanges) {
+    const openUtc = localDateTimeToUtc(dateStr, range.open);
+    const closeUtc = localDateTimeToUtc(dateStr, range.close);
 
-    // Reservations compare exactly on the ISO timestamp; since we insert
-    // slot times at minute-precision matching this grid, set lookup works.
-    const isReserved = reserved.has(iso);
-    const leadMs = t - now.getTime();
-    const isPast = leadMs <= 0;
-    const needsRush = isToday && !isPast && leadMs < settings.same_day_min_lead_minutes * 60 * 1000;
-    const isTooSoonEvenForRush = isToday && !isPast && leadMs < 15 * 60 * 1000; // 15 min hard floor
+    for (let t = openUtc.getTime(); t < closeUtc.getTime(); t += slotMs) {
+      const slotDate = new Date(t);
+      const iso = slotDate.toISOString();
+      if (seenIso.has(iso)) continue;
+      seenIso.add(iso);
 
-    let available = !isReserved && !isPast && !isTooSoonEvenForRush;
-    if (needsRush && !settings.allow_same_day) available = false;
+      const slotKey = formatTimeKey(slotDate);
+      const isReserved = reserved.has(iso);
+      const leadMs = t - now.getTime();
+      const isPast = leadMs <= 0;
+      const needsRush = isToday && !isPast && leadMs < settings.same_day_min_lead_minutes * 60 * 1000;
+      const isTooSoonEvenForRush = isToday && !isPast && leadMs < 15 * 60 * 1000;
 
-    const reason: PickupSlot["reason"] | undefined =
-      isReserved ? "reserved" : isPast ? "past" : !available ? "closed" : undefined;
+      let available = !isReserved && !isPast && !isTooSoonEvenForRush;
+      if (needsRush && !settings.allow_same_day) available = false;
 
-    slots.push({
-      pickupAt: iso,
-      display: formatDisplayTime(slotDate),
-      timeKey: slotKey,
-      available,
-      reason,
-      rushFeeCents: needsRush && available ? settings.same_day_rush_fee_cents : 0,
-    });
+      const reason: PickupSlot["reason"] | undefined =
+        isReserved ? "reserved" : isPast ? "past" : !available ? "closed" : undefined;
+
+      slots.push({
+        pickupAt: iso,
+        display: formatDisplayTime(slotDate),
+        timeKey: slotKey,
+        available,
+        reason,
+        rushFeeCents: needsRush && available ? settings.same_day_rush_fee_cents : 0,
+      });
+    }
   }
+
+  // Sort by time so multi-range days read naturally even if ranges were
+  // stored out of order.
+  slots.sort((a, b) => a.timeKey.localeCompare(b.timeKey));
 
   return {
     date: dateStr,
     isOpen: true,
     isClosure: false,
-    openTime: day.open_time,
-    closeTime: day.close_time,
+    openTime: dayRanges[0].open,
+    closeTime: dayRanges[dayRanges.length - 1].close,
     slots,
     hasAnyAvailable: slots.some(s => s.available),
   };

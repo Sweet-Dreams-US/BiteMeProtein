@@ -15,11 +15,18 @@ import { adminFetch } from "@/lib/admin-fetch";
  * subset of { schedule, closures, settings } in one call.
  */
 
+interface TimeRange {
+  id?: string;
+  open_time: string; // HH:MM
+  close_time: string;
+}
+
 interface ScheduleDay {
   day_of_week: number;
   is_open: boolean;
   open_time: string | null;
   close_time: string | null;
+  ranges: TimeRange[];
 }
 
 interface Closure {
@@ -75,7 +82,11 @@ export default function PickupSchedulePage() {
 
   useEffect(() => { load(); }, []);
 
-  async function save(payload: { schedule?: ScheduleDay[]; closures?: Closure[]; settings?: Partial<Settings> }) {
+  async function save(payload: {
+    schedule?: Array<{ day_of_week: number; is_open: boolean; ranges: TimeRange[] }>;
+    closures?: Closure[];
+    settings?: Partial<Settings>;
+  }) {
     setSaving(true);
     setError(null);
     try {
@@ -99,6 +110,39 @@ export default function PickupSchedulePage() {
   function updateDay(day_of_week: number, patch: Partial<ScheduleDay>) {
     setSchedule(prev => prev.map(d =>
       d.day_of_week === day_of_week ? { ...d, ...patch } : d,
+    ));
+  }
+
+  function updateRange(day_of_week: number, index: number, patch: Partial<TimeRange>) {
+    setSchedule(prev => prev.map(d => {
+      if (d.day_of_week !== day_of_week) return d;
+      const ranges = d.ranges.map((r, i) => i === index ? { ...r, ...patch } : r);
+      return { ...d, ranges };
+    }));
+  }
+
+  function addRange(day_of_week: number) {
+    setSchedule(prev => prev.map(d => {
+      if (d.day_of_week !== day_of_week) return d;
+      // Default new range: start from previous range's close (or 10am), one
+      // hour wide. Admin adjusts from there.
+      const last = d.ranges[d.ranges.length - 1];
+      const startHour = last ? last.close_time.slice(0, 2) : "14";
+      const openMin = last ? last.close_time.slice(3, 5) : "00";
+      const openTime = `${startHour}:${openMin}`;
+      const closeHour = String(Math.min(23, Number(startHour) + 1)).padStart(2, "0");
+      return {
+        ...d,
+        ranges: [...d.ranges, { open_time: openTime, close_time: `${closeHour}:${openMin}` }],
+      };
+    }));
+  }
+
+  function removeRange(day_of_week: number, index: number) {
+    setSchedule(prev => prev.map(d =>
+      d.day_of_week === day_of_week
+        ? { ...d, ranges: d.ranges.filter((_, i) => i !== index) }
+        : d,
     ));
   }
 
@@ -135,40 +179,80 @@ export default function PickupSchedulePage() {
 
       {/* ── Weekly hours ────────────────────────────────────────────────────── */}
       <section className="bg-white rounded-2xl border border-[#f0e6de] p-6">
-        <h2 className="text-lg font-bold text-[#5a3e36] mb-4">Weekly hours</h2>
-        <div className="space-y-2">
+        <h2 className="text-lg font-bold text-[#5a3e36] mb-2">Weekly hours</h2>
+        <p className="text-[#b0a098] text-xs mb-4">
+          Add multiple ranges for half-days or split shifts — e.g. 10:00-14:00 AND 16:00-20:00 means you&apos;re closed 2-4pm.
+        </p>
+        <div className="space-y-3">
           {schedule.map(day => (
-            <div key={day.day_of_week} className="grid grid-cols-[120px_80px_1fr_auto_1fr] gap-3 items-center">
-              <span className="font-medium text-[#5a3e36]">{DAY_NAMES[day.day_of_week]}</span>
-              <label className="flex items-center gap-2 text-sm text-[#7a6a62]">
-                <input
-                  type="checkbox"
-                  checked={day.is_open}
-                  onChange={e => updateDay(day.day_of_week, { is_open: e.target.checked })}
-                  className="w-4 h-4 accent-[#E8A0BF]"
-                />
-                Open
-              </label>
-              <input
-                type="time"
-                value={toTimeInput(day.open_time)}
-                onChange={e => updateDay(day.day_of_week, { open_time: fromTimeInput(e.target.value) })}
-                disabled={!day.is_open}
-                className={`${inputClass} disabled:opacity-40`}
-              />
-              <span className="text-[#b0a098]">to</span>
-              <input
-                type="time"
-                value={toTimeInput(day.close_time)}
-                onChange={e => updateDay(day.day_of_week, { close_time: fromTimeInput(e.target.value) })}
-                disabled={!day.is_open}
-                className={`${inputClass} disabled:opacity-40`}
-              />
+            <div key={day.day_of_week} className="border border-[#f0e6de] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-medium text-[#5a3e36]">{DAY_NAMES[day.day_of_week]}</span>
+                <label className="flex items-center gap-2 text-sm text-[#7a6a62]">
+                  <input
+                    type="checkbox"
+                    checked={day.is_open}
+                    onChange={e => {
+                      const open = e.target.checked;
+                      // When flipping open and there are no ranges yet, seed a default 10-18.
+                      if (open && day.ranges.length === 0) {
+                        updateDay(day.day_of_week, { is_open: true, ranges: [{ open_time: "10:00", close_time: "18:00" }] });
+                      } else {
+                        updateDay(day.day_of_week, { is_open: open });
+                      }
+                    }}
+                    className="w-4 h-4 accent-[#E8A0BF]"
+                  />
+                  Open
+                </label>
+              </div>
+
+              {day.is_open && (
+                <div className="space-y-2">
+                  {day.ranges.length === 0 && (
+                    <p className="text-[#b0a098] text-xs italic">No time ranges — add one below.</p>
+                  )}
+                  {day.ranges.map((range, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="time"
+                        value={toTimeInput(range.open_time)}
+                        onChange={e => updateRange(day.day_of_week, i, { open_time: e.target.value })}
+                        className={inputClass}
+                      />
+                      <span className="text-[#b0a098] text-sm">to</span>
+                      <input
+                        type="time"
+                        value={toTimeInput(range.close_time)}
+                        onChange={e => updateRange(day.day_of_week, i, { close_time: e.target.value })}
+                        className={inputClass}
+                      />
+                      <button
+                        onClick={() => removeRange(day.day_of_week, i)}
+                        className="text-red-500 text-xs font-bold hover:text-red-700 ml-2"
+                        aria-label="Remove range"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => addRange(day.day_of_week)}
+                    className="text-xs text-[#843430] font-bold hover:underline"
+                  >
+                    + Add another range
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
         <button
-          onClick={() => save({ schedule })}
+          onClick={() => save({ schedule: schedule.map(d => ({
+            day_of_week: d.day_of_week,
+            is_open: d.is_open,
+            ranges: d.ranges,
+          })) })}
           disabled={saving}
           className="mt-4 bg-[#E8A0BF] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#d889ad] disabled:opacity-50"
         >

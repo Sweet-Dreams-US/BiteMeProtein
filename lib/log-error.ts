@@ -57,9 +57,30 @@ function normalize(err: unknown): { message: string; stack: string | null } {
     return { message: err, stack: null };
   }
   try {
-    return { message: JSON.stringify(err), stack: null };
+    return { message: JSON.stringify(err, bigintReplacer), stack: null };
   } catch {
     return { message: String(err), stack: null };
+  }
+}
+
+/**
+ * JSON.stringify replacer that coerces BigInt to string. Defense-in-depth
+ * against any caller that forgets to sanitize before passing a Square SDK
+ * value into the error context. The global shim in instrumentation.ts
+ * handles most cases; this catches anything that slips through.
+ */
+function bigintReplacer(_key: string, value: unknown): unknown {
+  return typeof value === "bigint" ? value.toString() : value;
+}
+
+function sanitizeContext(ctx: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  if (!ctx) return null;
+  try {
+    // Round-trip through JSON with the BigInt replacer. Expensive but
+    // happens only on the error path, and keeps the row insert-safe.
+    return JSON.parse(JSON.stringify(ctx, bigintReplacer));
+  } catch {
+    return { _unserializable: true };
   }
 }
 
@@ -92,7 +113,7 @@ export async function logError(err: unknown, ctx: LogContext): Promise<void> {
       path: ctx.path,
       message,
       stack,
-      context: ctx.context ?? null,
+      context: sanitizeContext(ctx.context),
       user_id: ctx.userId ?? null,
       request_id: ctx.requestId ?? null,
     });
