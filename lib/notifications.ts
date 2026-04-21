@@ -23,6 +23,9 @@ interface OrderNotificationInput {
     administrativeDistrictLevel1: string;
     postalCode: string;
   };
+  /** ISO UTC — pickup orders only */
+  pickupAt?: string;
+  rushFeeCents?: number;
   bundles: Array<{
     tierName: string;
     priceCents: number;
@@ -31,10 +34,18 @@ interface OrderNotificationInput {
   items: Array<{ name: string; quantity: number; priceCents?: number }>;
 }
 
+function formatPickupTimeForAdmin(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit", hour12: true,
+  }).format(new Date(iso));
+}
+
 const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 function buildEmailHtml(data: OrderNotificationInput): string {
-  const { orderId, totalCents, buyerName, buyerEmail, buyerPhone, orderType, shippingService, shippingAddress, bundles, items } = data;
+  const { orderId, totalCents, buyerName, buyerEmail, buyerPhone, orderType, shippingService, shippingAddress, pickupAt, rushFeeCents, bundles, items } = data;
 
   const addressBlock = shippingAddress
     ? `
@@ -45,7 +56,10 @@ function buildEmailHtml(data: OrderNotificationInput): string {
       </p>
       ${shippingService ? `<p style="margin:4px 0;font-size:14px;color:#5a3e36;"><strong>Shipping:</strong> FedEx ${shippingService}</p>` : ""}
     `
-    : `<p style="margin:4px 0;font-size:14px;color:#5a3e36;"><strong>Fulfillment:</strong> Customer pickup</p>`;
+    : `
+      <p style="margin:4px 0;font-size:14px;color:#5a3e36;"><strong>Fulfillment:</strong> Customer pickup</p>
+      ${pickupAt ? `<p style="margin:4px 0;padding:10px 14px;background:#FFF0F5;border-left:3px solid #E8A0BF;font-size:14px;color:#5a3e36;"><strong>Pickup time:</strong> ${formatPickupTimeForAdmin(pickupAt)}${rushFeeCents && rushFeeCents > 0 ? ` <span style="color:#843430;font-weight:bold;">(RUSH +$${(rushFeeCents / 100).toFixed(2)})</span>` : ""}</p>` : ""}
+    `;
 
   const bundleRows = bundles
     .map(

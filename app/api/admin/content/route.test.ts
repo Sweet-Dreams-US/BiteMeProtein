@@ -17,11 +17,24 @@ const mocks = vi.hoisted(() => {
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     auth: { getUser: mocks.getUser },
-    from: () => ({
-      select: () => ({ order: mocks.order }),
-      upsert: mocks.upsert,
-      delete: () => ({ eq: mocks.deleteEq }),
-    }),
+    from: (table: string) => {
+      // requireAdmin now checks admin_users membership via service role.
+      // All tests assume the user IS in admin_users.
+      if (table === "admin_users") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () => Promise.resolve({ data: { email: "haley@bitemeprotein.com" }, error: null }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: () => ({ order: mocks.order }),
+        upsert: mocks.upsert,
+        delete: () => ({ eq: mocks.deleteEq }),
+      };
+    },
   }),
 }));
 
@@ -48,7 +61,7 @@ describe("app/api/admin/content", () => {
     });
 
     it("returns rows when authenticated", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       mocks.order.mockResolvedValue({
         data: [{ key: "hero.title", value: "Welcome", updated_at: new Date().toISOString() }],
         error: null,
@@ -67,7 +80,7 @@ describe("app/api/admin/content", () => {
     });
 
     it("400 when key is missing", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       const res = await PUT(req("http://localhost/api/admin/content", {
         method: "PUT",
         headers: { authorization: "Bearer tok" },
@@ -77,7 +90,7 @@ describe("app/api/admin/content", () => {
     });
 
     it("400 when value is missing", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       const res = await PUT(req("http://localhost/api/admin/content", {
         method: "PUT",
         headers: { authorization: "Bearer tok" },
@@ -87,7 +100,7 @@ describe("app/api/admin/content", () => {
     });
 
     it("upserts when authenticated with valid body", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       mocks.upsert.mockResolvedValue({ error: null });
       const res = await PUT(req("http://localhost/api/admin/content", {
         method: "PUT",
@@ -102,7 +115,7 @@ describe("app/api/admin/content", () => {
     });
 
     it("accepts null / false / 0 as values (uses explicit undefined check)", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       mocks.upsert.mockResolvedValue({ error: null });
       const res = await PUT(req("http://localhost/api/admin/content", {
         method: "PUT",
@@ -120,13 +133,13 @@ describe("app/api/admin/content", () => {
     });
 
     it("400 when key missing", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       const res = await DELETE(req("http://localhost/api/admin/content", { method: "DELETE", headers: { authorization: "Bearer tok" } }));
       expect(res.status).toBe(400);
     });
 
     it("deletes when authenticated", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       mocks.deleteEq.mockResolvedValue({ error: null });
       const res = await DELETE(req("http://localhost/api/admin/content?key=hero.title", {
         method: "DELETE",

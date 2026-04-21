@@ -14,6 +14,7 @@ const navItems = [
   { href: "/admin/bundles", label: "Bundles", icon: "📦" },
   { href: "/admin/events", label: "Events", icon: "📅" },
   { href: "/admin/orders", label: "Orders", icon: "🧾" },
+  { href: "/admin/pickup-schedule", label: "Pickup Hours", icon: "🕐" },
   { href: "/admin/loyalty", label: "Loyalty", icon: "⭐" },
   { href: "/admin/discounts", label: "Discounts", icon: "🎟️" },
   { href: "/admin/content", label: "Content", icon: "📝" },

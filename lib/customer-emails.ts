@@ -29,12 +29,25 @@ export interface OrderEmailData {
   orderType: "pickup" | "shipping";
   items: OrderEmailItem[];
   trackUrl: string;
+  /** ISO UTC — pickup orders only. Rendered in America/New_York. */
+  pickupAt?: string;
+  /** Non-zero if same-day rush fee was applied */
+  rushFeeCents?: number;
   /** Only used by shipped template */
   carrier?: string;
   /** Only used by shipped template */
   trackingNumber?: string;
   /** Only used by shipped template — built from carrier deep-link */
   trackingUrl?: string;
+}
+
+function formatPickupTime(iso: string): string {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "long", month: "long", day: "numeric",
+    hour: "numeric", minute: "2-digit", hour12: true,
+  }).format(d);
 }
 
 const formatPrice = (cents: number | undefined) =>
@@ -204,10 +217,14 @@ function greeting(data: OrderEmailData): string {
 export async function sendOrderConfirmation(data: OrderEmailData): Promise<void> {
   if (!data.buyerEmail) return;
 
+  const pickupLine = data.orderType === "pickup" && data.pickupAt
+    ? `<p style="margin:16px 0 8px;padding:12px 16px;background:#FFF0F5;border-left:3px solid #E8A0BF;border-radius:6px;color:#5a3e36;"><strong>🏪 Pickup:</strong> ${formatPickupTime(data.pickupAt)}<br><span style="color:#7a6a62;font-size:13px;">953 E Oakland Park Blvd, Oakland Park, FL 33334</span></p>`
+    : "";
+
   const body =
     data.orderType === "pickup"
-      ? "Thank you for ordering from Bite Me! We'll get your treats baked fresh. Your pickup details are on the order page — please come by within 1–2 days so they're at their best."
-      : "Thank you for ordering from Bite Me! We bake each treat fresh, then pack with a cold pack and ship via FedEx. You'll get another email with tracking the moment your order heads out — usually 1–2 business days.";
+      ? `Thank you for ordering from Bite Me! We'll have your treats fresh and ready at your pickup time.${pickupLine}${data.rushFeeCents && data.rushFeeCents > 0 ? `<p style="color:#b0a098;font-size:13px;margin-top:8px;">Same-day rush fee applied.</p>` : ""}`
+      : "Thank you for ordering from Bite Me! We bake each treat fresh, then pack with a cold pack and ship via FedEx. You'll get another email with tracking the moment your order heads out — usually 1–5 business days.";
 
   const html = buildEmail({
     headerEmoji: "🎉",
