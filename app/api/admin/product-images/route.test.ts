@@ -16,11 +16,22 @@ const mocks = vi.hoisted(() => {
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     auth: { getUser: mocks.getUser },
-    from: () => ({
-      insert: () => ({ select: () => ({ single: mocks.single }) }),
-      delete: () => ({ eq: mocks.deleteEq }),
-      update: () => ({ eq: mocks.updateEq }),
-    }),
+    from: (table: string) => {
+      if (table === "admin_users") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () => Promise.resolve({ data: { email: "haley@bitemeprotein.com" }, error: null }),
+            }),
+          }),
+        };
+      }
+      return {
+        insert: () => ({ select: () => ({ single: mocks.single }) }),
+        delete: () => ({ eq: mocks.deleteEq }),
+        update: () => ({ eq: mocks.updateEq }),
+      };
+    },
   }),
 }));
 
@@ -46,7 +57,7 @@ describe("app/api/admin/product-images", () => {
     });
 
     it("400 when url is missing", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       const res = await POST(req("http://localhost/api/admin/product-images", {
         method: "POST",
         headers: { authorization: "Bearer tok" },
@@ -56,7 +67,7 @@ describe("app/api/admin/product-images", () => {
     });
 
     it("400 when neither squareProductId nor slug provided", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       const res = await POST(req("http://localhost/api/admin/product-images", {
         method: "POST",
         headers: { authorization: "Bearer tok" },
@@ -66,7 +77,7 @@ describe("app/api/admin/product-images", () => {
     });
 
     it("400 when kind is invalid", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       const res = await POST(req("http://localhost/api/admin/product-images", {
         method: "POST",
         headers: { authorization: "Bearer tok" },
@@ -76,7 +87,7 @@ describe("app/api/admin/product-images", () => {
     });
 
     it("inserts when authenticated with valid body", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       mocks.single.mockResolvedValue({ data: { id: "new-uuid" }, error: null });
       const res = await POST(req("http://localhost/api/admin/product-images", {
         method: "POST",
@@ -96,7 +107,7 @@ describe("app/api/admin/product-images", () => {
     });
 
     it("400 when updates[] missing", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       const res = await PATCH(req("http://localhost/api/admin/product-images", {
         method: "PATCH",
         headers: { authorization: "Bearer tok" },
@@ -106,7 +117,7 @@ describe("app/api/admin/product-images", () => {
     });
 
     it("updates all rows in the batch", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       mocks.updateEq.mockResolvedValue({ error: null });
       const res = await PATCH(req("http://localhost/api/admin/product-images", {
         method: "PATCH",
@@ -125,7 +136,7 @@ describe("app/api/admin/product-images", () => {
     });
 
     it("400 when id missing", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       const res = await DELETE(req("http://localhost/api/admin/product-images", {
         method: "DELETE",
         headers: { authorization: "Bearer tok" },
@@ -134,7 +145,7 @@ describe("app/api/admin/product-images", () => {
     });
 
     it("deletes when authenticated", async () => {
-      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
       mocks.deleteEq.mockResolvedValue({ error: null });
       const res = await DELETE(req("http://localhost/api/admin/product-images?id=abc", {
         method: "DELETE",

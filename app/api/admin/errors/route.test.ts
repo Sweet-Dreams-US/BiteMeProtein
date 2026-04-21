@@ -19,10 +19,21 @@ vi.mock("@supabase/supabase-js", () => {
     or: vi.fn().mockReturnThis(),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(rowsMock()).then(resolve),
   };
+  const adminUsersBuilder = {
+    select: () => ({
+      eq: () => ({
+        maybeSingle: () => Promise.resolve({ data: { email: "haley@bitemeprotein.com" }, error: null }),
+      }),
+    }),
+  };
   return {
     createClient: () => ({
       auth: { getUser: mockGetUser },
-      from: vi.fn().mockReturnValue(queryBuilder),
+      // requireAdmin calls from("admin_users"); everything else uses the
+      // errors-table queryBuilder.
+      from: vi.fn().mockImplementation((table: string) =>
+        table === "admin_users" ? adminUsersBuilder : queryBuilder,
+      ),
     }),
   };
 });
@@ -45,7 +56,7 @@ describe("app/api/admin/errors GET", () => {
   });
 
   it("returns rows when authenticated", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
     rowsMock.mockReturnValue({
       data: [
         { id: "1", level: "error", source: "api-route", path: "/x", message: "m", created_at: new Date().toISOString() },
@@ -60,7 +71,7 @@ describe("app/api/admin/errors GET", () => {
   });
 
   it("returns empty rows when query returns empty data", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
     rowsMock.mockReturnValue({ data: [], error: null });
     const res = await GET(buildReq({ authorization: "Bearer tok" }));
     expect(res.status).toBe(200);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { adminFetch } from "@/lib/admin-fetch";
 import Link from "next/link";
+import UpcomingPickups from "@/components/admin/UpcomingPickups";
 
 interface Stats {
   squareProducts: number;
@@ -112,6 +113,12 @@ export default function AdminDashboard() {
           ))}
         </div>
       )}
+
+      {/* Upcoming pickups — Haley's bake list for today + tomorrow */}
+      <div className="mb-10">
+        <h3 className="text-[#5a3e36] font-semibold mb-4">Upcoming pickups</h3>
+        <UpcomingPickups />
+      </div>
 
       {/* Square Status */}
       <div className="bg-white rounded-2xl p-6 border border-[#f0e6de] shadow-sm mb-10">

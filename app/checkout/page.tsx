@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PaymentForm, CreditCard } from "react-square-web-payments-sdk";
 import { useCart } from "@/lib/cart";
 import Link from "next/link";
+import PickupPicker, { PickupSelection } from "@/components/checkout/PickupPicker";
 
 interface ShippingOption {
   service: string;
@@ -54,6 +55,9 @@ export default function CheckoutPage() {
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [loadingRates, setLoadingRates] = useState(false);
   const [rateError, setRateError] = useState<string | null>(null);
+
+  // Pickup slot selection
+  const [pickupSelection, setPickupSelection] = useState<PickupSelection | null>(null);
 
   // Payment state
   const [submitting, setSubmitting] = useState(false);
@@ -114,8 +118,9 @@ export default function CheckoutPage() {
   }, [zip, orderType, hasShippableBundle]);
 
   const shippingCostCents = orderType === "shipping" && selectedShipping ? selectedShipping.priceCents : 0;
+  const rushFeeCents = orderType === "pickup" ? (pickupSelection?.rushFeeCents ?? 0) : 0;
   const discountSavingsCents = appliedPromo?.savingsCents ?? 0;
-  const grandTotal = Math.max(0, totalPrice + shippingCostCents - discountSavingsCents);
+  const grandTotal = Math.max(0, totalPrice + shippingCostCents + rushFeeCents - discountSavingsCents);
 
   // Re-validate applied promo whenever cart / orderType changes — keeps
   // UI honest if the customer toggles pickup/shipping after applying.
@@ -210,8 +215,9 @@ export default function CheckoutPage() {
       if (!address1 || !city || !state || zip.length < 5) return false;
       if (!selectedShipping) return false;
     }
+    if (orderType === "pickup" && !pickupSelection) return false;
     return true;
-  }, [isEmpty, allBundlesFull, firstName, lastName, email, orderType, address1, city, state, zip, selectedShipping]);
+  }, [isEmpty, allBundlesFull, firstName, lastName, email, orderType, address1, city, state, zip, selectedShipping, pickupSelection]);
 
   // Square credentials (public values)
   const appId = process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
@@ -261,6 +267,7 @@ export default function CheckoutPage() {
           shippingCostCents,
           promoCode: appliedPromo?.code,
           idempotencyKey: idempotencyKey.current || undefined,
+          pickupAt: orderType === "pickup" ? pickupSelection?.pickupAt : undefined,
         }),
       });
 
@@ -279,7 +286,7 @@ export default function CheckoutPage() {
       setPayError(err instanceof Error ? err.message : "Payment failed");
       setSubmitting(false);
     }
-  }, [bundles, items, email, phone, orderType, address1, address2, city, state, zip, firstName, lastName, selectedShipping, shippingCostCents, appliedPromo?.code, clearCart, router]);
+  }, [bundles, items, email, phone, orderType, address1, address2, city, state, zip, firstName, lastName, selectedShipping, shippingCostCents, appliedPromo?.code, pickupSelection, clearCart, router]);
 
   if (isEmpty) return null;
 
@@ -379,6 +386,19 @@ export default function CheckoutPage() {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Pickup time — shown whenever orderType === "pickup",
+                including when cart has no shippable bundles */}
+            {orderType === "pickup" && (
+              <div className="card-bakery p-6 md:p-8">
+                <h2 className="font-fun text-burgundy text-xl mb-4">Pickup time</h2>
+                <p className="text-dark/50 text-xs mb-4">
+                  Pick up at <strong>953 E Oakland Park Blvd, Oakland Park, FL 33334</strong>.
+                  Orders are baked fresh — next-day is the default, same-day has a small rush fee if a slot&apos;s open.
+                </p>
+                <PickupPicker value={pickupSelection} onChange={setPickupSelection} />
               </div>
             )}
 
@@ -489,7 +509,11 @@ export default function CheckoutPage() {
 
               {!canSubmit && !submitting && (
                 <p className="text-dark/40 text-xs text-center mt-3">
-                  {!allBundlesFull ? "Fill your boxes first" : "Complete the form above"}
+                  {!allBundlesFull
+                    ? "Fill your boxes first"
+                    : orderType === "pickup" && !pickupSelection
+                    ? "Pick a pickup date + time"
+                    : "Complete the form above"}
                 </p>
               )}
 
@@ -535,6 +559,12 @@ export default function CheckoutPage() {
                   <div className="flex justify-between">
                     <span className="text-dark/50">Shipping (FedEx {selectedShipping.service})</span>
                     <span className="text-dark font-semibold">{formatPrice(shippingCostCents)}</span>
+                  </div>
+                )}
+                {rushFeeCents > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-dark/50">Same-day rush</span>
+                    <span className="text-dark font-semibold">{formatPrice(rushFeeCents)}</span>
                   </div>
                 )}
                 {appliedPromo && (

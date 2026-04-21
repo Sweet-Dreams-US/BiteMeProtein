@@ -15,14 +15,25 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     auth: { getUser: mocks.getUser },
-    from: (table: string) => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle:
-            table === "square_orders" ? mocks.orderMaybeSingle : mocks.fulfillmentMaybeSingle,
+    from: (table: string) => {
+      if (table === "admin_users") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () => Promise.resolve({ data: { email: "haley@bitemeprotein.com" }, error: null }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle:
+              table === "square_orders" ? mocks.orderMaybeSingle : mocks.fulfillmentMaybeSingle,
+          }),
         }),
-      }),
-    }),
+      };
+    },
   }),
 }));
 
@@ -54,7 +65,7 @@ describe("app/api/admin/customer-email POST", () => {
   });
 
   it("400 when orderId missing", async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
     const res = await POST(req("http://localhost/api/admin/customer-email", {
       method: "POST",
       headers: { authorization: "Bearer tok" },
@@ -64,7 +75,7 @@ describe("app/api/admin/customer-email POST", () => {
   });
 
   it("400 when type is invalid", async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
     const res = await POST(req("http://localhost/api/admin/customer-email", {
       method: "POST",
       headers: { authorization: "Bearer tok" },
@@ -74,7 +85,7 @@ describe("app/api/admin/customer-email POST", () => {
   });
 
   it("404 when order not found", async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
     mocks.orderMaybeSingle.mockResolvedValue({ data: null, error: null });
     mocks.fulfillmentMaybeSingle.mockResolvedValue({ data: null, error: null });
     const res = await POST(req("http://localhost/api/admin/customer-email", {
@@ -86,7 +97,7 @@ describe("app/api/admin/customer-email POST", () => {
   });
 
   it("200 sent:false when order has no customer email anywhere", async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
     mocks.orderMaybeSingle.mockResolvedValue({
       data: {
         id: "O_1",
@@ -111,7 +122,7 @@ describe("app/api/admin/customer-email POST", () => {
   });
 
   it("200 sent:true and dispatches with the right data shape", async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
     mocks.orderMaybeSingle.mockResolvedValue({
       data: {
         id: "SQUARE_ORD_ABCDEF",
@@ -152,7 +163,7 @@ describe("app/api/admin/customer-email POST", () => {
   });
 
   it("falls back to raw fulfillment recipient when customer row is missing", async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "haley@bitemeprotein.com" } }, error: null });
     mocks.orderMaybeSingle.mockResolvedValue({
       data: {
         id: "O_pickup",
