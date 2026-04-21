@@ -9,15 +9,13 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         // Keep these out of search-engine indexes. They're either behind
-        // auth (admin, account), not intended for direct indexing (api,
-        // callbacks), or transient (order confirmation, track links with
-        // query params that expose order IDs).
+        // auth (admin), not intended for direct indexing (api), or
+        // transient (order confirmation, track links with query params
+        // that expose order IDs).
         disallow: [
           "/admin",
           "/admin/*",
           "/api/*",
-          "/account",
-          "/account/*",
           "/order-confirmation",
           "/track",
         ],

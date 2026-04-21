@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
-import { useCurrentCustomer } from "@/lib/customer-auth";
 
 interface TrackedOrder {
   orderId: string;
@@ -51,7 +50,6 @@ interface LoyaltyInfo {
 function TrackPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useCurrentCustomer();
 
   const [orderId, setOrderId] = useState(searchParams.get("id") || "");
   const [email, setEmail] = useState(searchParams.get("email") || "");
@@ -61,13 +59,6 @@ function TrackPageContent() {
   const [loyalty, setLoyalty] = useState<LoyaltyInfo | null>(null);
   const [phoneInput, setPhoneInput] = useState("");
   const autoLookedUpRef = useRef(false);
-
-  // Signed-in customer: pre-fill email once we know who they are, so they
-  // don't have to re-type it. If they also arrived with ?id= in the URL,
-  // auto-lookup on their behalf.
-  useEffect(() => {
-    if (user?.email && !email) setEmail(user.email);
-  }, [user, email]);
 
   const handleLookup = async (e?: React.FormEvent) => {
     e?.preventDefault();
