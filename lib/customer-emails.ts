@@ -12,7 +12,7 @@
 
 import { logError } from "@/lib/log-error";
 
-export type CustomerEmailType = "confirmation" | "preparing" | "shipped" | "delivered";
+export type CustomerEmailType = "confirmation" | "preparing" | "shipped" | "delivered" | "refunded";
 
 export interface OrderEmailItem {
   name: string;
@@ -360,12 +360,41 @@ export async function sendOrderDelivered(data: OrderEmailData): Promise<void> {
 
 // ── Dispatcher for API route ────────────────────────────────────────────────
 
+export async function sendOrderRefunded(data: OrderEmailData & { refundAmountCents?: number }): Promise<void> {
+  if (!data.buyerEmail) return;
+
+  const refundAmount = data.refundAmountCents ?? data.totalCents;
+  const isFull = refundAmount >= data.totalCents;
+  const amountStr = `$${(refundAmount / 100).toFixed(2)}`;
+
+  const body = isFull
+    ? `We've processed a full refund of <strong>${amountStr}</strong> for your order. The funds should appear on your statement within 3–5 business days.<br><br>If you have questions, reply to this email or text us at <a href="tel:+19546044127" style="color:#843430;font-weight:bold;text-decoration:none;">(954) 604-4127</a>.`
+    : `We've processed a partial refund of <strong>${amountStr}</strong> for your order. The funds should appear on your statement within 3–5 business days.<br><br>If you have questions, reply to this email or text us at <a href="tel:+19546044127" style="color:#843430;font-weight:bold;text-decoration:none;">(954) 604-4127</a>.`;
+
+  const html = buildEmail({
+    headerEmoji: "💸",
+    headerTitle: "Your refund is on the way",
+    greeting: greeting(data),
+    body,
+    data,
+    cta: { label: "View order", url: data.trackUrl },
+  });
+
+  await sendViaResend({
+    to: data.buyerEmail,
+    subject: `💸 Refund processed — Bite Me order #${data.shortId}`,
+    html,
+    context: { orderId: data.orderId, type: "refunded" },
+  });
+}
+
 export async function sendCustomerEmail(type: CustomerEmailType, data: OrderEmailData): Promise<void> {
   switch (type) {
     case "confirmation": return sendOrderConfirmation(data);
     case "preparing": return sendOrderPreparing(data);
     case "shipped": return sendOrderShipped(data);
     case "delivered": return sendOrderDelivered(data);
+    case "refunded": return sendOrderRefunded(data);
   }
 }
 

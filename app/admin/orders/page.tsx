@@ -142,7 +142,7 @@ export default function AdminOrders() {
   const [editNotes, setEditNotes] = useState("");
   const [priorStatus, setPriorStatus] = useState("new");
   const [autoSendEmail, setAutoSendEmail] = useState(true);
-  const [emailAction, setEmailAction] = useState<"" | "preparing" | "shipped" | "delivered" | "confirmation">("");
+  const [emailAction, setEmailAction] = useState<"" | "preparing" | "shipped" | "delivered" | "confirmation" | "refunded">("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailResult, setEmailResult] = useState<string>("");
 
@@ -261,7 +261,7 @@ export default function AdminOrders() {
     setEmailResult("");
   };
 
-  const sendCustomerEmailFor = async (orderId: string, type: "confirmation" | "preparing" | "shipped" | "delivered") => {
+  const sendCustomerEmailFor = async (orderId: string, type: "confirmation" | "preparing" | "shipped" | "delivered" | "refunded") => {
     setEmailBusy(true);
     setEmailResult("");
     try {
@@ -777,6 +777,7 @@ export default function AdminOrders() {
                     <option value="preparing">{isPickupOrder(selectedOrder) ? "Baking" : "Preparing"}</option>
                     <option value="shipped">{isPickupOrder(selectedOrder) ? "Ready for pickup" : "Shipped"}</option>
                     <option value="delivered">{isPickupOrder(selectedOrder) ? "Picked up" : "Delivered"}</option>
+                    <option value="refunded">Refund processed</option>
                   </select>
                   <button
                     disabled={!emailAction || emailBusy}
