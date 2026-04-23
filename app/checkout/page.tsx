@@ -250,6 +250,7 @@ export default function CheckoutPage() {
           items: items.map((i) => ({
             variationId: i.variationId,
             quantity: i.quantity,
+            name: i.name,
           })),
           buyerEmail: email,
           buyerPhone: phone,
