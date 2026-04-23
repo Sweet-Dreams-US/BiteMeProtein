@@ -5,6 +5,7 @@ import { getSquareClient } from "@/lib/square";
 import { requireAdmin } from "@/lib/admin-auth";
 import { logError } from "@/lib/log-error";
 import { stripBigInts } from "@/lib/sync/json-safe";
+import { sendOrderRefunded } from "@/lib/customer-emails";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -135,6 +136,56 @@ export async function POST(
           raw: stripBigInts(refund),
           synced_at: new Date().toISOString(),
         }, { onConflict: "id" });
+      }
+
+      // Fire-and-forget branded refund email to the customer. Failures land
+      // in error_logs but don't fail the admin request — the refund itself
+      // already succeeded at Square.
+      const { data: orderForEmail } = await supabase
+        .from("square_orders")
+        .select("id, customer_id, total_money_cents, raw, customer:square_customers(email, given_name, family_name)")
+        .eq("id", orderId)
+        .maybeSingle();
+
+      if (orderForEmail) {
+        // Pull buyer email from the customer row OR from the raw order's
+        // fulfillment recipient (covers orders placed before we synced the
+        // customer record).
+        const rawOrder = (orderForEmail as { raw?: any }).raw ?? {};
+        const fulfillments = rawOrder.fulfillments ?? rawOrder.order?.fulfillments ?? [];
+        const fulfillmentRecipient = Array.isArray(fulfillments)
+          ? fulfillments[0]?.shipmentDetails?.recipient ?? fulfillments[0]?.pickupDetails?.recipient
+          : null;
+
+        const customerField = (orderForEmail as { customer?: unknown }).customer;
+        const customerRow = Array.isArray(customerField) ? customerField[0] : customerField;
+        const typed = customerRow as { email?: string | null; given_name?: string | null; family_name?: string | null } | null;
+
+        const buyerEmail: string | undefined =
+          typed?.email ?? fulfillmentRecipient?.emailAddress ?? undefined;
+
+        if (buyerEmail) {
+          const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() || "https://bitemeprotein.com";
+          sendOrderRefunded({
+            orderId,
+            shortId: orderId.slice(-6).toUpperCase(),
+            buyerEmail,
+            buyerName: [typed?.given_name, typed?.family_name].filter(Boolean).join(" ") || fulfillmentRecipient?.displayName || undefined,
+            totalCents: (orderForEmail as { total_money_cents?: number | null }).total_money_cents ?? amountCents,
+            orderType: Array.isArray(fulfillments) && fulfillments.some((f: { type?: string }) => f?.type === "PICKUP")
+              ? "pickup"
+              : "shipping",
+            items: [],
+            trackUrl: `${origin}/track?id=${encodeURIComponent(orderId)}&email=${encodeURIComponent(buyerEmail)}`,
+            refundAmountCents: amountCents,
+          }).catch((emailErr) =>
+            logError(emailErr, {
+              path: "/api/admin/orders/[id]/refund:email",
+              source: "api-route",
+              context: { orderId, refundId },
+            }),
+          );
+        }
       }
 
       return NextResponse.json({ ok: true, refund });

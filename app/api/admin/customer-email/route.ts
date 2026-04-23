@@ -19,14 +19,14 @@ import {
  *   - automatically by /admin/orders when Haley saves a status change
  *   - manually from the "Resend" dropdown in the order detail modal
  *
- * Body: { orderId: string, type: "confirmation"|"preparing"|"shipped"|"delivered" }
+ * Body: { orderId: string, type: "confirmation"|"preparing"|"shipped"|"delivered"|"refunded" }
  *
  * Fire-and-forget internally (sendCustomerEmail never throws). We return
  * success:true unless we couldn't build the data (missing order / missing
  * buyer email).
  */
 
-const VALID_TYPES: CustomerEmailType[] = ["confirmation", "preparing", "shipped", "delivered"];
+const VALID_TYPES: CustomerEmailType[] = ["confirmation", "preparing", "shipped", "delivered", "refunded"];
 
 function getServiceClient() {
   return createClient(
