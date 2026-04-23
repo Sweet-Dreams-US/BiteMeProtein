@@ -21,12 +21,29 @@ interface TrackedOrder {
   shippedAt: string | null;
 }
 
-const statusSteps: { key: string; label: string; description: string; emoji: string }[] = [
-  { key: "new", label: "Order received", description: "We've got it — baking soon", emoji: "📝" },
-  { key: "preparing", label: "Being baked", description: "Fresh from the oven", emoji: "🔥" },
-  { key: "shipped", label: "On the way", description: "Your treats are traveling", emoji: "📦" },
-  { key: "delivered", label: "Delivered", description: "Enjoy!", emoji: "🎉" },
-];
+interface StatusStep { key: string; label: string; description: string; emoji: string }
+
+// Steps are shared between both fulfillment types up through "preparing",
+// then diverge: pickup orders end at "picked up at the kitchen," shipping
+// orders end at "delivered by carrier." Rendering the shipping steps on a
+// pickup order is confusing (customer wonders why it says "on the way"
+// when they're driving to the bakery).
+function getStatusSteps(fulfillmentType: "SHIPMENT" | "PICKUP" | null): StatusStep[] {
+  if (fulfillmentType === "PICKUP") {
+    return [
+      { key: "new", label: "Order received", description: "We've got it — baking soon", emoji: "📝" },
+      { key: "preparing", label: "Being baked", description: "Fresh from the oven", emoji: "🔥" },
+      { key: "shipped", label: "Ready for pickup", description: "Come grab your treats!", emoji: "🏪" },
+      { key: "delivered", label: "Picked up", description: "Enjoy!", emoji: "🎉" },
+    ];
+  }
+  return [
+    { key: "new", label: "Order received", description: "We've got it — baking soon", emoji: "📝" },
+    { key: "preparing", label: "Being baked", description: "Fresh from the oven", emoji: "🔥" },
+    { key: "shipped", label: "On the way", description: "Your treats are traveling", emoji: "📦" },
+    { key: "delivered", label: "Delivered", description: "Enjoy!", emoji: "🎉" },
+  ];
+}
 
 function carrierTrackingUrl(carrier: string | null, number: string): string {
   const n = encodeURIComponent(number);
@@ -106,10 +123,47 @@ function TrackPageContent() {
     }
   };
 
+  // Auto-lookup rewards when the order loads — the customer already told
+  // us their email to find the order, so we don't need to ask again. We
+  // hit /api/rewards/lookup which resolves email → phone → Square loyalty
+  // balance internally, then adapt to the track page's loyalty shape.
+  useEffect(() => {
+    if (!order || !email.trim() || loyalty) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/rewards/lookup", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ input: email.trim() }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.found) {
+          setLoyalty({
+            enabled: true,
+            balance: data.points ?? 0,
+            lifetimePoints: data.lifetimePoints ?? 0,
+            terminology: data.terminology,
+            rewardTiers: data.rewardTiers,
+          });
+        }
+        // If not found, leave loyalty null so the manual phone-entry
+        // fallback renders for customers whose email never made it into
+        // Square's customer directory.
+      } catch {
+        /* silent */
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.orderId, email]);
+
   const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
+  const statusSteps = getStatusSteps(order?.fulfillmentType ?? null);
   const statusIndex = statusSteps.findIndex((s) => s.key === order?.status);
   const inputClass = "w-full bg-[#FFF9F4] border border-[#e8ddd4] rounded-xl px-4 py-3 text-dark placeholder:text-dark/30 focus:outline-none focus:border-[#E8A0BF] focus:ring-2 focus:ring-[#E8A0BF]/20 transition-all";
 
