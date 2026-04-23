@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "./supabase-admin";
+import { stripBigInts } from "./json-safe";
 import { getSquareClient, paginate, withRetry } from "./square-client";
 import { logError } from "@/lib/log-error";
 import type { SyncResult } from "./types";
@@ -22,7 +23,7 @@ export async function upsertRefund(raw: any): Promise<void> {
     amount_cents: toCents(raw.amountMoney),
     reason: raw.reason ?? null,
     status: raw.status ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
 

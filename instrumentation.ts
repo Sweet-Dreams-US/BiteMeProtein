@@ -1,19 +1,20 @@
 /**
  * Next.js runs this file once per serverless function cold start, before
- * any route handler executes. Used here to install a BigInt → JSON shim
- * so stringifying Square SDK responses (which use BigInt for money values)
- * doesn't throw "Do not know how to serialize a BigInt" inside Supabase's
- * insert path or anywhere else.
+ * any route handler executes. Reserved for process-wide init; currently
+ * empty.
  *
- * Converts BigInt → string on JSON.stringify. Money values we actually
- * read are always converted to Number via toCents() in sync handlers, so
- * the string representation is purely for the raw-dump JSONB column.
+ * NOTE: We previously shimmed BigInt.prototype.toJSON here to fix
+ * Supabase writes of Square raw responses. That shim broke the OPPOSITE
+ * direction — Square's SDK sends amounts as BigInt in request bodies and
+ * Square's API expects them as JSON integers, not strings. The shim
+ * turned them into strings globally and Square rejected with "Expected
+ * an integer value".
+ *
+ * The correct fix lives in lib/sync/json-safe.ts, applied per-call at
+ * Supabase write sites only, so outbound Square requests keep their
+ * BigInt-as-number serialization.
  */
 
 export async function register() {
-  if (typeof (BigInt.prototype as { toJSON?: () => string }).toJSON !== "function") {
-    (BigInt.prototype as { toJSON?: () => string }).toJSON = function () {
-      return this.toString();
-    };
-  }
+  // Intentionally empty — see note above.
 }

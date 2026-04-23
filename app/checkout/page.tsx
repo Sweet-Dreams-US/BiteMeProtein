@@ -304,16 +304,22 @@ export default function CheckoutPage() {
   const inputClass = "w-full bg-[#FFF9F4] border border-[#e8ddd4] rounded-xl px-4 py-3 text-dark placeholder:text-dark/30 focus:outline-none focus:border-[#E8A0BF] focus:ring-2 focus:ring-[#E8A0BF]/20 transition-all";
 
   return (
-    <section className="bg-cream min-h-screen py-12">
+    <section className="bg-cream min-h-screen py-12 overflow-x-hidden">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <div className="mb-6">
           <Link href="/shop" className="text-burgundy/60 hover:text-burgundy text-sm font-semibold">← Back to shop</Link>
           <h1 className="font-fun text-burgundy text-4xl md:text-5xl mt-3">Checkout</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
+        {/* min-w-0 on both grid children: CSS grid's `1fr` column has a
+            min-width:auto default, which means nested grids/flex content
+            (e.g. the slot grid's ~60 buttons) can push the column wider
+            than its track and spill the whole layout past the container.
+            Setting min-width: 0 forces the column to honor its track size
+            so the 400px aside stays pinned at the right edge. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] gap-8">
           {/* LEFT: Form */}
-          <div className="space-y-6">
+          <div className="space-y-6 min-w-0">
             {/* Contact */}
             <div className="card-bakery p-6 md:p-8">
               <h2 className="font-fun text-burgundy text-xl mb-4">Your info</h2>
@@ -524,7 +530,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* RIGHT: Order summary */}
-          <aside className="lg:sticky lg:top-24 lg:self-start">
+          <aside className="lg:sticky lg:top-24 lg:self-start min-w-0">
             <div className="card-bakery p-6">
               <h2 className="font-fun text-burgundy text-xl mb-4">Your order</h2>
 

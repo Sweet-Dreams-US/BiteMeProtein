@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "./supabase-admin";
+import { stripBigInts } from "./json-safe";
 import { getSquareClient, paginate, withRetry } from "./square-client";
 import { logError } from "@/lib/log-error";
 import type { SyncResult } from "./types";
@@ -26,7 +27,7 @@ export async function upsertGiftCard(raw: any): Promise<void> {
     state: raw.state ?? null,
     balance_cents: toCents(raw.balanceMoney),
     created_at: raw.createdAt ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   }, { onConflict: "id" });
   if (error) await logError(error, { path: "lib/sync/tier-c.ts:upsertGiftCard", source: "lib", context: { giftCardId: raw.id } });
@@ -60,7 +61,7 @@ export async function upsertDispute(raw: any): Promise<void> {
     state: raw.state ?? null,
     due_at: raw.dueAt ?? null,
     created_at: raw.createdAt ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   }, { onConflict: "id" });
   if (error) await logError(error, { path: "lib/sync/tier-c.ts:upsertDispute", source: "lib", context: { disputeId: raw.id } });
@@ -93,7 +94,7 @@ export async function upsertCashDrawerShift(raw: any): Promise<void> {
     closed_at: raw.closedAt ?? null,
     opened_cash_money_cents: toCents(raw.openedCashMoney),
     closed_cash_money_cents: toCents(raw.closedCashMoney),
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   }, { onConflict: "id" });
   if (error) await logError(error, { path: "lib/sync/tier-c.ts:upsertCashDrawerShift", source: "lib", context: { shiftId: raw.id } });
@@ -128,7 +129,7 @@ export async function upsertTeamMember(raw: any): Promise<void> {
     status: raw.status ?? null,
     is_owner: raw.isOwner ?? false,
     created_at: raw.createdAt ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   }, { onConflict: "id" });
   if (error) await logError(error, { path: "lib/sync/tier-c.ts:upsertTeamMember", source: "lib", context: { teamMemberId: raw.id } });
@@ -162,7 +163,7 @@ export async function upsertInvoice(raw: any): Promise<void> {
     due_date: raw.paymentRequests?.[0]?.dueDate ?? null,
     created_at: raw.createdAt ?? null,
     updated_at: raw.updatedAt ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   }, { onConflict: "id" });
   if (error) await logError(error, { path: "lib/sync/tier-c.ts:upsertInvoice", source: "lib", context: { invoiceId: raw.id } });

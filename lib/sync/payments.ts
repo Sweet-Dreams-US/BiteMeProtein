@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "./supabase-admin";
+import { stripBigInts } from "./json-safe";
 import { getSquareClient, paginate, withRetry } from "./square-client";
 import { logError } from "@/lib/log-error";
 import type { SyncResult } from "./types";
@@ -24,7 +25,7 @@ export async function upsertPayment(raw: any): Promise<void> {
     card_last_4: raw.cardDetails?.card?.last4 ?? null,
     status: raw.status ?? null,
     receipt_url: raw.receiptUrl ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
 

@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "./supabase-admin";
+import { stripBigInts } from "./json-safe";
 import { getSquareClient, paginate, withRetry } from "./square-client";
 import { logError } from "@/lib/log-error";
 import type { SyncResult } from "./types";
@@ -38,7 +39,7 @@ export async function upsertOrder(raw: any): Promise<void> {
     source_name: raw.source?.name ?? null,
     reference_id: raw.referenceId ?? null,
     version: raw.version ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
 
@@ -68,7 +69,7 @@ export async function upsertOrder(raw: any): Promise<void> {
         variation_name: li.variationName ?? null,
         catalog_object_id: li.catalogObjectId ?? null,
         note: li.note ?? null,
-        raw: li,
+        raw: stripBigInts(li),
       }));
     if (rows.length > 0) {
       const { error: liErr } = await supabase.from("square_order_line_items").upsert(rows, { onConflict: "id" });

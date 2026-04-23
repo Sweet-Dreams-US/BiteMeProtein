@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "./supabase-admin";
+import { stripBigInts } from "./json-safe";
 import { getSquareClient } from "./square-client";
 import { logError } from "@/lib/log-error";
 import type { SyncResult } from "./types";
@@ -15,7 +16,7 @@ export async function upsertInventoryCount(raw: any): Promise<void> {
     state: raw.state,
     quantity: raw.quantity ?? "0",
     calculated_at: raw.calculatedAt ?? new Date().toISOString(),
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
   const { error } = await supabase

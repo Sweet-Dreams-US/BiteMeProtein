@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "./supabase-admin";
+import { stripBigInts } from "./json-safe";
 import { getSquareClient, paginate, withRetry } from "./square-client";
 import { logError } from "@/lib/log-error";
 import type { SyncResult } from "./types";
@@ -22,7 +23,7 @@ export async function upsertProduct(raw: any): Promise<void> {
     category_id: itemData.categoryId ?? null,
     is_archived: itemData.isArchived ?? false,
     updated_at: raw.updatedAt ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
 
@@ -69,7 +70,7 @@ export async function upsertCategory(raw: any): Promise<void> {
   const row = {
     id: raw.id,
     name: raw.categoryData?.name ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
   const { error } = await supabase.from("square_catalog_categories").upsert(row, { onConflict: "id" });
@@ -92,7 +93,7 @@ export async function upsertModifier(raw: any): Promise<void> {
     name: md.name ?? null,
     modifier_list_id: md.modifierListId ?? null,
     price_cents: toCents(md.priceMoney),
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
   const { error } = await supabase.from("square_catalog_modifiers").upsert(row, { onConflict: "id" });

@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "./supabase-admin";
+import { stripBigInts } from "./json-safe";
 import { getSquareClient, withRetry } from "./square-client";
 import { logError } from "@/lib/log-error";
 import type { SyncResult } from "./types";
@@ -13,7 +14,7 @@ export async function upsertLocation(raw: any): Promise<void> {
     name: raw.name ?? null,
     status: raw.status ?? null,
     address: raw.address ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
   const { error } = await supabase.from("square_locations").upsert(row, { onConflict: "id" });

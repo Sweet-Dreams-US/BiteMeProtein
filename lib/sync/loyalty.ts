@@ -1,4 +1,5 @@
 import { getAdminSupabase } from "./supabase-admin";
+import { stripBigInts } from "./json-safe";
 import { getSquareClient, paginate, withRetry } from "./square-client";
 import { logError } from "@/lib/log-error";
 import type { SyncResult } from "./types";
@@ -18,7 +19,7 @@ export async function upsertLoyaltyAccount(raw: any): Promise<void> {
     lifetime_points: raw.lifetimePoints ?? 0,
     created_at: raw.createdAt ?? null,
     updated_at: raw.updatedAt ?? null,
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
   const { error } = await supabase.from("square_loyalty_accounts").upsert(row, { onConflict: "id" });
@@ -46,7 +47,7 @@ export async function upsertLoyaltyEvent(raw: any): Promise<void> {
       null,
     order_id: raw.accumulatePoints?.orderId ?? null,
     created_at: raw.createdAt ?? new Date().toISOString(),
-    raw,
+    raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
   const { error } = await supabase.from("square_loyalty_events").upsert(row, { onConflict: "id" });
