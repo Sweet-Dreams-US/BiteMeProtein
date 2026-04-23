@@ -20,6 +20,12 @@ interface CheckoutBundle {
 interface CheckoutItem {
   variationId: string;
   quantity: number;
+  /** Display name from the client's cart. Used in customer + admin emails
+   *  so we don't fall back to the opaque variationId. Defensive: server
+   *  keeps its own Square lookup as a backup in the future, but for now
+   *  trusting client-supplied name is fine — it's just cosmetic text in
+   *  receipts, not an authoritative amount. */
+  name?: string;
 }
 
 interface PayRequest {
@@ -305,7 +311,11 @@ export async function POST(req: NextRequest) {
         ...bundles.flatMap((b) =>
           b.items.map((i) => ({ name: `${b.tierName}: ${i.name}`, quantity: i.quantity })),
         ),
-        ...items.map((i) => ({ variationId: i.variationId, quantity: i.quantity })),
+        ...items.map((i) => ({
+          name: i.name ?? i.variationId,
+          variationId: i.variationId,
+          quantity: i.quantity,
+        })),
       ];
       const { error: reservationErr } = await reservationClient
         .from("pickup_reservations")
@@ -391,7 +401,7 @@ export async function POST(req: NextRequest) {
         items: b.items.map((i) => ({ name: i.name, quantity: i.quantity })),
       })),
       items: items.map((i) => ({
-        name: i.variationId, // we'd need to look up the name from Square — for now use variationId
+        name: i.name ?? i.variationId,
         quantity: i.quantity,
       })),
     }).catch((err) =>
@@ -422,7 +432,7 @@ export async function POST(req: NextRequest) {
               quantity: i.quantity,
             })),
           ),
-          ...items.map((i) => ({ name: i.variationId, quantity: i.quantity })),
+          ...items.map((i) => ({ name: i.name ?? i.variationId, quantity: i.quantity })),
         ],
         trackUrl: `${origin}/track?id=${encodeURIComponent(orderId)}&email=${encodeURIComponent(buyerEmail)}`,
       }).catch((err) =>

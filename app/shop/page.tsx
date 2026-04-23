@@ -138,6 +138,21 @@ function ShopContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Clear the local "building a bundle" state when the corresponding
+  // bundle disappears from the cart (e.g., customer hit Remove in the
+  // CartDrawer). Without this, the sticky bottom bar stays pinned with
+  // the old tier name, "Add to bundle" buttons silently no-op because
+  // activeBundleIndex no longer points at a real bundle, and the
+  // customer can't actually buy individual items alongside a cleared
+  // bundle attempt.
+  useEffect(() => {
+    if (activeBundleIndex === null) return;
+    if (bundles[activeBundleIndex] === undefined) {
+      setSelectedTier(null);
+      setActiveBundleIndex(null);
+    }
+  }, [bundles, activeBundleIndex]);
+
   const showcaseProducts = products
     .filter((p) => productShowcase[p.name])
     .filter((p) => { const e = enrichments[p.id]; return !e || e.is_visible !== false; })

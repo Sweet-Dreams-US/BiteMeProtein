@@ -469,34 +469,58 @@ export default function AdminOrders() {
                   <div>
                     <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Status</label>
                     <div className="flex gap-1.5">
-                      {["new", "preparing", "shipped", "delivered"].map((s) => (
-                        <button key={s} onClick={() => setEditStatus(s)}
-                          className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
-                            editStatus === s ? `${statusColors[s]}` : "bg-[#FFF5EE] text-[#b0a098] hover:text-[#7a6a62]"
-                          }`}>
-                          {s}
-                        </button>
-                      ))}
+                      {(() => {
+                        // Status keys stay the same in the DB (new / preparing /
+                        // shipped / delivered) so tests, filters, and existing
+                        // fulfillment rows don't break. For pickup orders the
+                        // button labels are re-skinned because "shipped" and
+                        // "delivered" don't describe what Haley actually does
+                        // (she boxes and hands it over, not FedEx).
+                        const isPickup = (() => {
+                          const fulfillments = selectedOrder.raw?.fulfillments ?? selectedOrder.raw?.order?.fulfillments ?? [];
+                          return Array.isArray(fulfillments)
+                            && fulfillments.some((f: { type?: string }) => f?.type === "PICKUP");
+                        })();
+                        const labels: Record<string, string> = isPickup
+                          ? { new: "new", preparing: "baking", shipped: "ready", delivered: "picked up" }
+                          : { new: "new", preparing: "preparing", shipped: "shipped", delivered: "delivered" };
+                        return ["new", "preparing", "shipped", "delivered"].map((s) => (
+                          <button key={s} onClick={() => setEditStatus(s)}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
+                              editStatus === s ? `${statusColors[s]}` : "bg-[#FFF5EE] text-[#b0a098] hover:text-[#7a6a62]"
+                            }`}>
+                            {labels[s]}
+                          </button>
+                        ));
+                      })()}
                     </div>
                   </div>
-                  {(editStatus === "shipped" || editStatus === "delivered") && (
-                    <>
-                      <div>
-                        <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Carrier</label>
-                        <select value={editCarrier} onChange={(e) => setEditCarrier(e.target.value)} className={inputClass}>
-                          <option value="">Select carrier</option>
-                          <option value="USPS">USPS</option>
-                          <option value="UPS">UPS</option>
-                          <option value="FedEx">FedEx</option>
-                          <option value="DHL">DHL</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Tracking Number</label>
-                        <input type="text" value={editTracking} onChange={(e) => setEditTracking(e.target.value)} className={inputClass} placeholder="Enter tracking number" />
-                      </div>
-                    </>
-                  )}
+                  {(editStatus === "shipped" || editStatus === "delivered") && (() => {
+                    // Hide carrier + tracking for pickup orders — Haley has no
+                    // tracking number for a treat she handed across the counter.
+                    const fulfillments = selectedOrder.raw?.fulfillments ?? selectedOrder.raw?.order?.fulfillments ?? [];
+                    const isPickup = Array.isArray(fulfillments)
+                      && fulfillments.some((f: { type?: string }) => f?.type === "PICKUP");
+                    if (isPickup) return null;
+                    return (
+                      <>
+                        <div>
+                          <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Carrier</label>
+                          <select value={editCarrier} onChange={(e) => setEditCarrier(e.target.value)} className={inputClass}>
+                            <option value="">Select carrier</option>
+                            <option value="USPS">USPS</option>
+                            <option value="UPS">UPS</option>
+                            <option value="FedEx">FedEx</option>
+                            <option value="DHL">DHL</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Tracking Number</label>
+                          <input type="text" value={editTracking} onChange={(e) => setEditTracking(e.target.value)} className={inputClass} placeholder="Enter tracking number" />
+                        </div>
+                      </>
+                    );
+                  })()}
                   <div>
                     <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Notes</label>
                     <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} className={inputClass} placeholder="Internal notes about this order..." />

@@ -218,7 +218,11 @@ export async function sendOrderConfirmation(data: OrderEmailData): Promise<void>
   if (!data.buyerEmail) return;
 
   const pickupLine = data.orderType === "pickup" && data.pickupAt
-    ? `<p style="margin:16px 0 8px;padding:12px 16px;background:#FFF0F5;border-left:3px solid #E8A0BF;border-radius:6px;color:#5a3e36;"><strong>🏪 Pickup:</strong> ${formatPickupTime(data.pickupAt)}<br><span style="color:#7a6a62;font-size:13px;">953 E Oakland Park Blvd, Oakland Park, FL 33334</span></p>`
+    ? `<div style="margin:16px 0 8px;padding:14px 16px;background:#FFF0F5;border-left:3px solid #E8A0BF;border-radius:6px;color:#5a3e36;">
+         <p style="margin:0 0 6px;"><strong>🏪 Pickup:</strong> ${formatPickupTime(data.pickupAt)}</p>
+         <p style="margin:0 0 8px;color:#7a6a62;font-size:13px;">953 E Oakland Park Blvd, Oakland Park, FL 33334</p>
+         <p style="margin:0;color:#5a3e36;font-size:13px;"><strong>When you arrive:</strong> call or text <a href="tel:+19546044127" style="color:#843430;font-weight:bold;text-decoration:none;">(954) 604-4127</a> and we'll bring your order out to you.</p>
+       </div>`
     : "";
 
   const body =
@@ -268,6 +272,34 @@ export async function sendOrderPreparing(data: OrderEmailData): Promise<void> {
 export async function sendOrderShipped(data: OrderEmailData): Promise<void> {
   if (!data.buyerEmail) return;
 
+  // For pickup orders, "shipped" status = "ready for pickup" — Haley clicked
+  // the button, treats are boxed, customer should come grab them.
+  if (data.orderType === "pickup") {
+    const pickupLine = data.pickupAt
+      ? `<div style="margin:16px 0 8px;padding:14px 16px;background:#FFF0F5;border-left:3px solid #E8A0BF;border-radius:6px;color:#5a3e36;">
+           <p style="margin:0 0 6px;"><strong>🏪 Pickup:</strong> ${formatPickupTime(data.pickupAt)}</p>
+           <p style="margin:0 0 8px;color:#7a6a62;font-size:13px;">953 E Oakland Park Blvd, Oakland Park, FL 33334</p>
+           <p style="margin:0;color:#5a3e36;font-size:13px;"><strong>When you arrive:</strong> call or text <a href="tel:+19546044127" style="color:#843430;font-weight:bold;text-decoration:none;">(954) 604-4127</a> and we'll bring your order out to you.</p>
+         </div>`
+      : "";
+    const html = buildEmail({
+      headerEmoji: "🏪",
+      headerTitle: "Ready for pickup!",
+      greeting: greeting(data),
+      body: `Your order is ready! Come grab your treats — they're fresh from the oven.${pickupLine}`,
+      data,
+      cta: { label: "View order details", url: data.trackUrl },
+    });
+    await sendViaResend({
+      to: data.buyerEmail,
+      subject: `🏪 Your Bite Me order is ready — #${data.shortId}`,
+      html,
+      context: { orderId: data.orderId, type: "shipped" },
+    });
+    return;
+  }
+
+  // Shipping: treats are out the door with a carrier.
   const trackingBlock = data.trackingNumber
     ? `Your ${data.carrier ?? "carrier"} tracking number is <strong>${data.trackingNumber}</strong>.${
         data.trackingUrl
@@ -301,11 +333,15 @@ export async function sendOrderShipped(data: OrderEmailData): Promise<void> {
 export async function sendOrderDelivered(data: OrderEmailData): Promise<void> {
   if (!data.buyerEmail) return;
 
-  const body = `Your order arrived! Hope you love every bite. If you have a second, we'd be so grateful if you'd share a photo or tag us on Instagram @bitemeprotein — it genuinely makes Haley's day.`;
+  // For pickup orders, "delivered" = customer picked up. Thank + prompt review.
+  const isPickup = data.orderType === "pickup";
+  const body = isPickup
+    ? `Thanks for picking up your Bite Me order! Hope every bite hits. If you have a second, tag us on Instagram <a href="https://instagram.com/biteme_protein" style="color:#843430;">@biteme_protein</a> — it genuinely makes Haley's day.`
+    : `Your order arrived! Hope you love every bite. If you have a second, we'd be so grateful if you'd share a photo or tag us on Instagram @bitemeprotein — it genuinely makes Haley's day.`;
 
   const html = buildEmail({
     headerEmoji: "✨",
-    headerTitle: "Your order arrived — enjoy!",
+    headerTitle: isPickup ? "Thanks for stopping by!" : "Your order arrived — enjoy!",
     greeting: greeting(data),
     body,
     data,
@@ -314,7 +350,9 @@ export async function sendOrderDelivered(data: OrderEmailData): Promise<void> {
 
   await sendViaResend({
     to: data.buyerEmail,
-    subject: `✨ Your Bite Me order arrived — enjoy! — #${data.shortId}`,
+    subject: isPickup
+      ? `✨ Enjoy your Bite Me treats! — #${data.shortId}`
+      : `✨ Your Bite Me order arrived — enjoy! — #${data.shortId}`,
     html,
     context: { orderId: data.orderId, type: "delivered" },
   });
