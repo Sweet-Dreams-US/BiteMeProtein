@@ -20,14 +20,64 @@ function toCents(money: { amount?: number | string | bigint } | undefined): numb
   }
 }
 
+/**
+ * Find the event (if any) whose date range contains the given timestamp.
+ * Returns null if no match. Matching rule:
+ *   event.date <= orderCreatedAt <= (event.end_date OR event.date + 1 day)
+ * so single-day events without end_date still match sales made during
+ * their active day.
+ */
+async function findEventForOrder(
+  supabase: ReturnType<typeof getAdminSupabase>,
+  orderCreatedAt: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("events")
+    .select("id, date, end_date")
+    .lte("date", orderCreatedAt)
+    .order("date", { ascending: false })
+    .limit(5);
+  if (!Array.isArray(data) || data.length === 0) return null;
+  const orderMs = new Date(orderCreatedAt).getTime();
+  for (const ev of data as Array<{ id: string; date: string; end_date: string | null }>) {
+    const end = ev.end_date
+      ? new Date(ev.end_date).getTime()
+      : new Date(ev.date).getTime() + 24 * 60 * 60 * 1000;
+    if (orderMs <= end) return ev.id;
+  }
+  return null;
+}
+
 export async function upsertOrder(raw: any): Promise<void> {
   if (!raw?.id) return;
 
   const supabase = getAdminSupabase();
 
-  const row = {
+  const createdAt = raw.createdAt ?? new Date().toISOString();
+  const isInPerson = !raw.source?.name
+    || raw.source.name === "Square Point of Sale"
+    || raw.source.name === "Point of Sale";
+
+  // Preserve any manually-assigned event_id across resyncs. If the row
+  // already has one set, we keep it. If unset and the order is in-person,
+  // try to auto-match by date (online orders never auto-tag — they
+  // originate from the website, not a tent event).
+  const { data: existing } = await supabase
+    .from("square_orders")
+    .select("event_id")
+    .eq("id", raw.id)
+    .maybeSingle();
+
+  let eventId: string | null | undefined = undefined; // undefined = don't write
+  if (existing?.event_id) {
+    eventId = existing.event_id;
+  } else if (isInPerson) {
+    eventId = await findEventForOrder(supabase, createdAt);
+  }
+
+  const row: Record<string, unknown> = {
     id: raw.id,
-    created_at: raw.createdAt ?? new Date().toISOString(),
+    created_at: createdAt,
     updated_at: raw.updatedAt ?? raw.createdAt ?? new Date().toISOString(),
     state: raw.state ?? null,
     location_id: raw.locationId ?? null,
@@ -42,6 +92,7 @@ export async function upsertOrder(raw: any): Promise<void> {
     raw: stripBigInts(raw),
     synced_at: new Date().toISOString(),
   };
+  if (eventId !== undefined) row.event_id = eventId;
 
   const { error } = await supabase.from("square_orders").upsert(row, { onConflict: "id" });
   if (error) {

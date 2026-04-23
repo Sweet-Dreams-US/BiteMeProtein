@@ -1,0 +1,160 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+import { getSquareClient } from "@/lib/square";
+import { requireAdmin } from "@/lib/admin-auth";
+import { logError } from "@/lib/log-error";
+import { stripBigInts } from "@/lib/sync/json-safe";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+/**
+ * POST /api/admin/orders/[id]/refund
+ *
+ * Admin-initiated refund. Finds the order's payment, calls Square's
+ * CreateRefund, records an order_refund_initiations row, and returns the
+ * created refund. Partial refunds are supported via optional amount_cents;
+ * if omitted we refund the full amount.
+ *
+ * Body: { amount_cents?: number, reason?: string }
+ *
+ * The Square webhook for refund.created fires asynchronously — our
+ * square_refunds table (which drives the admin "Refunded" pill) will
+ * populate from that webhook. The initiation row exists so the admin UI
+ * can show "pending refund" immediately without waiting for the webhook.
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const unauthorized = await requireAdmin(req);
+  if (unauthorized) return unauthorized;
+
+  try {
+    const { id: orderId } = await params;
+    const body = await req.json().catch(() => ({}));
+    const reason: string = (typeof body.reason === "string" && body.reason) || "admin refund";
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+
+    // Need the payment id + original amount. Pull from square_payments first;
+    // if absent, fall back to the order's raw.tenders for the payment id.
+    const { data: paymentRow } = await supabase
+      .from("square_payments")
+      .select("id, amount_cents")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let paymentId: string | null = paymentRow?.id ?? null;
+    let originalAmountCents: number | null = paymentRow?.amount_cents ?? null;
+
+    if (!paymentId) {
+      const { data: orderRow } = await supabase
+        .from("square_orders")
+        .select("raw, total_money_cents")
+        .eq("id", orderId)
+        .maybeSingle();
+      const raw = (orderRow as { raw?: any; total_money_cents?: number } | null)?.raw;
+      const tenders = raw?.tenders ?? raw?.order?.tenders ?? [];
+      if (Array.isArray(tenders) && tenders[0]?.paymentId) {
+        paymentId = tenders[0].paymentId;
+      }
+      originalAmountCents = orderRow?.total_money_cents ?? null;
+    }
+
+    if (!paymentId) {
+      return NextResponse.json(
+        { error: "Could not find a payment for this order. Refund in Square Dashboard directly." },
+        { status: 400 },
+      );
+    }
+
+    const amountCents = typeof body.amount_cents === "number"
+      ? Math.max(1, Math.floor(body.amount_cents))
+      : originalAmountCents;
+
+    if (!amountCents || amountCents <= 0) {
+      return NextResponse.json({ error: "Could not determine refund amount" }, { status: 400 });
+    }
+
+    // Create the initiation row FIRST so the admin UI sees "pending" even
+    // before Square responds. Status will be updated to 'completed' or
+    // 'failed' based on the API call below.
+    const { data: initiation, error: initErr } = await supabase
+      .from("order_refund_initiations")
+      .insert({
+        square_order_id: orderId,
+        square_payment_id: paymentId,
+        amount_cents: amountCents,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+    if (initErr) throw initErr;
+
+    try {
+      const square = getSquareClient();
+      const refundResp: any = await (square.refunds as any).refundPayment({
+        idempotencyKey: crypto.randomUUID(),
+        paymentId,
+        amountMoney: { amount: BigInt(amountCents), currency: "USD" },
+        reason,
+      });
+
+      const refund = refundResp.refund ?? refundResp.result?.refund;
+      const refundId = refund?.id;
+
+      // Mark initiation completed. The eventual webhook will also populate
+      // square_refunds with the canonical row.
+      await supabase
+        .from("order_refund_initiations")
+        .update({
+          status: "completed",
+          square_refund_id: refundId ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", initiation.id);
+
+      // Seed square_refunds optimistically so the admin "Refunded" pill shows
+      // immediately without waiting for the webhook echo. Idempotent on id.
+      if (refundId) {
+        await supabase.from("square_refunds").upsert({
+          id: refundId,
+          payment_id: paymentId,
+          order_id: orderId,
+          created_at: refund?.createdAt ?? new Date().toISOString(),
+          amount_cents: amountCents,
+          reason,
+          status: refund?.status ?? "PENDING",
+          raw: stripBigInts(refund),
+          synced_at: new Date().toISOString(),
+        }, { onConflict: "id" });
+      }
+
+      return NextResponse.json({ ok: true, refund });
+    } catch (squareErr: any) {
+      const detail = squareErr?.errors?.[0]?.detail
+        ?? squareErr?.body?.errors?.[0]?.detail
+        ?? (squareErr instanceof Error ? squareErr.message : "Refund failed");
+      await supabase
+        .from("order_refund_initiations")
+        .update({ status: "failed", error: detail, updated_at: new Date().toISOString() })
+        .eq("id", initiation.id);
+      await logError(squareErr, {
+        path: "/api/admin/orders/[id]/refund:square",
+        source: "api-route",
+        context: { orderId, paymentId, amountCents },
+      });
+      return NextResponse.json({ error: detail }, { status: 500 });
+    }
+  } catch (err) {
+    await logError(err, { path: "/api/admin/orders/[id]/refund", source: "api-route" });
+    return NextResponse.json({ error: "Refund failed" }, { status: 500 });
+  }
+}

@@ -22,8 +22,16 @@ interface Order {
   source_name: string | null;
   customer_id: string | null;
   raw: any;
+  event_id: string | null;
   line_items?: LineItem[];
   customer?: { email: string | null; phone: string | null; given_name: string | null; family_name: string | null } | null;
+  event?: { id: string; title: string; date: string } | null;
+}
+
+interface EventOption {
+  id: string;
+  title: string;
+  date: string;
 }
 
 interface Fulfillment {
@@ -52,6 +60,10 @@ const statusColors: Record<string, string> = {
   CANCELED: "bg-red-50 text-red-500",
 };
 
+// POS sales share the "new" DB status but should be visually distinct —
+// they're history, not a work queue. Green = done, like COMPLETED.
+const posBadgeColor = "bg-green-50/70 text-green-700";
+
 const dateFilterToIso = (f: DateFilter): string | null => {
   if (f === "all") return null;
   const now = Date.now();
@@ -72,12 +84,20 @@ const isPickupOrder = (order: Order): boolean => {
     && fulfillments.some((f: { type?: string }) => f?.type === "PICKUP");
 };
 
-// Display label for a workflow status. Pickup orders get different words
-// because "shipped" / "delivered" don't describe a bakery handing a box
-// across a counter. The DB status key (new / preparing / shipped /
-// delivered) stays constant so filters, reports, and automation don't
-// need to care about the label choice.
+// Display label for a workflow status. DB keys stay constant (new /
+// preparing / shipped / delivered) so filters, reports, and automation
+// keep working; the UI rebranding happens here.
+//
+//   - In-person POS orders bypass the workflow entirely — the customer
+//     already walked away with the item at the register. Showing "new"
+//     on those is misleading. Label as "POS sale".
+//   - Pickup orders use bakery language (baking / ready / picked up).
+//   - Shipping orders use carrier language (preparing / shipped / delivered).
+const isInPersonOrder = (order: Order): boolean =>
+  !isOnlineSource(order.source_name);
+
 const statusLabel = (order: Order, status: string): string => {
+  if (isInPersonOrder(order) && status === "new") return "POS sale";
   if (!isPickupOrder(order)) return status;
   const pickupLabels: Record<string, string> = {
     new: "new",
@@ -107,6 +127,12 @@ export default function AdminOrders() {
   // on order_id so one lookup covers all attached refunds.
   const [refundedOrderIds, setRefundedOrderIds] = useState<Set<string>>(new Set());
 
+  // Events dropdown for tagging orders. Small list — just pull all active
+  // events. Used by the detail panel's event picker.
+  const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
+  const [refunding, setRefunding] = useState(false);
+  const [taggingEvent, setTaggingEvent] = useState(false);
+
   // Detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [saving, setSaving] = useState(false);
@@ -132,22 +158,24 @@ export default function AdminOrders() {
       let q = supabase
         .from("square_orders")
         .select(`
-          id, created_at, state, total_money_cents, source_name, customer_id, raw,
+          id, created_at, state, total_money_cents, source_name, customer_id, raw, event_id,
           line_items:square_order_line_items(id, name, quantity, base_price_cents, variation_name),
-          customer:square_customers(email, phone, given_name, family_name)
+          customer:square_customers(email, phone, given_name, family_name),
+          event:events(id, title, date)
         `)
         .order("created_at", { ascending: false })
         .limit(200);
 
       if (sinceIso) q = q.gte("created_at", sinceIso);
 
-      const [ordersRes, fulfillRes, refundsRes] = await Promise.all([
+      const [ordersRes, fulfillRes, refundsRes, eventsRes] = await Promise.all([
         q,
         supabase.from("order_fulfillment").select("*"),
-        // Only completed refunds count — pending Square refunds haven't
-        // actually moved money yet. status COMPLETED is the definitive
-        // "customer got their money back" signal.
-        supabase.from("square_refunds").select("order_id, status").eq("status", "COMPLETED"),
+        // Any refund row (any status) attached to an order is enough to
+        // mark it "refunded" in the UI — admin sees pending + completed.
+        // We filter on completed only for the KPI exclusion elsewhere.
+        supabase.from("square_refunds").select("order_id, status"),
+        supabase.from("events").select("id, title, date").order("date", { ascending: false }),
       ]);
 
       if (ordersRes.error) throw ordersRes.error;
@@ -155,7 +183,10 @@ export default function AdminOrders() {
       const fetched: Order[] = (ordersRes.data ?? []).map((row: any) => ({
         ...row,
         customer: Array.isArray(row.customer) ? row.customer[0] ?? null : row.customer,
+        event: Array.isArray(row.event) ? row.event[0] ?? null : row.event,
       }));
+
+      if (eventsRes.data) setEventOptions(eventsRes.data as EventOption[]);
 
       // New-order toast
       if (lastOrderIdsRef.current.size > 0) {
@@ -251,6 +282,74 @@ export default function AdminOrders() {
       setEmailResult(err instanceof Error ? err.message : "Send failed");
     }
     setEmailBusy(false);
+  };
+
+  // Tag the selected order with an event (or untag with "").
+  const saveOrderEvent = async (eventId: string | null) => {
+    if (!selectedOrder) return;
+    setTaggingEvent(true);
+    try {
+      const res = await adminFetch(`/api/admin/orders/${selectedOrder.id}/event`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id: eventId }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? "Save failed");
+      }
+      // Reflect the change locally so the row updates without a refetch.
+      const picked = eventId ? eventOptions.find(e => e.id === eventId) ?? null : null;
+      setSelectedOrder({ ...selectedOrder, event_id: eventId, event: picked });
+      setOrders(prev => prev.map(o => o.id === selectedOrder.id
+        ? { ...o, event_id: eventId, event: picked }
+        : o));
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setTaggingEvent(false);
+    }
+  };
+
+  // Kick off a refund via our /api/admin/orders/[id]/refund endpoint. The
+  // endpoint calls Square's RefundPayment with the order's original
+  // payment and upserts into square_refunds on success, so the Refunded
+  // pill appears immediately.
+  const refundOrder = async () => {
+    if (!selectedOrder) return;
+    const confirmed = window.confirm(
+      `Refund order #${selectedOrder.id.slice(-6).toUpperCase()} for ${
+        selectedOrder.total_money_cents != null
+          ? `$${(selectedOrder.total_money_cents / 100).toFixed(2)}`
+          : "the full amount"
+      }? This posts to Square immediately.`,
+    );
+    if (!confirmed) return;
+    setRefunding(true);
+    try {
+      const res = await adminFetch(`/api/admin/orders/${selectedOrder.id}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Admin refund" }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error ?? "Refund failed");
+      // Optimistically mark this order as refunded in the local set so the
+      // pill shows up without waiting for the webhook round-trip.
+      setRefundedOrderIds(prev => {
+        const next = new Set(prev);
+        next.add(selectedOrder.id);
+        return next;
+      });
+      // eslint-disable-next-line no-alert
+      alert("Refund sent to Square. Customer will receive their refund within 3–5 business days.");
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert(err instanceof Error ? err.message : "Refund failed");
+    } finally {
+      setRefunding(false);
+    }
   };
 
   const saveFulfillment = async () => {
@@ -510,12 +609,21 @@ export default function AdminOrders() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {order.event && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 hidden md:inline">
+                        🎪 {order.event.title}
+                      </span>
+                    )}
                     {refundedOrderIds.has(order.id) && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-red-50 text-red-500">💸 Refunded</span>
                     )}
                     {f?.tracking_number && <span className="text-purple-500 text-[10px] font-bold">📦 Tracked</span>}
                     <span className="text-[#5a3e36] font-bold text-sm">{formatPrice(order.total_money_cents)}</span>
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg ${statusColors[status] || "bg-[#FFF5EE] text-[#b0a098]"}`}>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg ${
+                      isInPersonOrder(order) && status === "new"
+                        ? posBadgeColor
+                        : statusColors[status] || "bg-[#FFF5EE] text-[#b0a098]"
+                    }`}>
                       {statusLabel(order, status)}
                     </span>
                   </div>
@@ -617,6 +725,31 @@ export default function AdminOrders() {
                 </div>
               </div>
 
+              {/* Event tagging — useful for in-person POS sales at Haley's
+                  tent events. Also available on online orders in case you
+                  want to attribute a catering order to an event you worked. */}
+              <div className="border-t border-[#f0e6de] pt-4">
+                <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                  🎪 Event
+                </label>
+                <select
+                  value={selectedOrder.event_id ?? ""}
+                  onChange={(e) => saveOrderEvent(e.target.value || null)}
+                  disabled={taggingEvent || eventOptions.length === 0}
+                  className={inputClass}
+                >
+                  <option value="">{eventOptions.length === 0 ? "No events created yet — add via Events page" : "— No event —"}</option>
+                  {eventOptions.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.title} · {new Date(ev.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </option>
+                  ))}
+                </select>
+                {selectedOrder.event && (
+                  <p className="text-[#b0a098] text-xs mt-1">Currently tagged: {selectedOrder.event.title}</p>
+                )}
+              </div>
+
               <div className="space-y-2 pt-2">
                 <label className="flex items-center gap-2 text-xs text-[#5a3e36] cursor-pointer">
                   <input
@@ -656,6 +789,25 @@ export default function AdminOrders() {
                 {emailResult && (
                   <p className={`text-xs ${emailResult.startsWith("Error") ? "text-red-500" : "text-[#7a6a62]"}`}>
                     {emailResult}
+                  </p>
+                )}
+
+                {/* Refund button — hidden for already-refunded orders since
+                    a second refund on the same payment would error out on
+                    Square. Disabled state while the request is in flight so
+                    we don't double-submit. */}
+                {!refundedOrderIds.has(selectedOrder.id) && (
+                  <button
+                    onClick={refundOrder}
+                    disabled={refunding}
+                    className="w-full border border-red-300 text-red-600 py-2.5 rounded-xl text-sm font-semibold hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {refunding ? "Refunding…" : "💸 Refund this order"}
+                  </button>
+                )}
+                {refundedOrderIds.has(selectedOrder.id) && (
+                  <p className="text-red-500 text-xs text-center py-2">
+                    💸 Already refunded — issue a second refund from Square Dashboard if needed.
                   </p>
                 )}
 

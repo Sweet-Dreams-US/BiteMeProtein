@@ -6,10 +6,41 @@ vi.mock("@/lib/log-error", () => ({
 
 const upsertMock = vi.fn().mockResolvedValue({ error: null });
 const deleteEqMock = vi.fn().mockResolvedValue({ error: null });
-const fromMock = vi.fn(() => ({
-  upsert: upsertMock,
-  delete: () => ({ eq: deleteEqMock }),
-}));
+// upsertOrder now reads existing event_id before upserting (to preserve
+// manually-assigned event tags across resyncs) and queries events for the
+// date-overlap auto-tag. Both chains terminate in maybeSingle / a plain
+// thenable depending on the path, so mock both shapes.
+const fromMock = vi.fn((table: string) => {
+  if (table === "square_orders") {
+    return {
+      upsert: upsertMock,
+      delete: () => ({ eq: deleteEqMock }),
+      select: () => ({
+        eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }),
+      }),
+    };
+  }
+  if (table === "events") {
+    // Empty events list → auto-tag finds no match (path returns null early)
+    return {
+      select: () => ({
+        lte: () => ({
+          order: () => ({
+            limit: () => Promise.resolve({ data: [], error: null }),
+          }),
+        }),
+      }),
+    };
+  }
+  if (table === "square_order_line_items") {
+    return {
+      upsert: upsertMock,
+      delete: () => ({ eq: deleteEqMock }),
+    };
+  }
+  // Default — any other table lookups
+  return { upsert: upsertMock };
+});
 
 vi.mock("./supabase-admin", () => ({
   getAdminSupabase: () => ({ from: fromMock }),
