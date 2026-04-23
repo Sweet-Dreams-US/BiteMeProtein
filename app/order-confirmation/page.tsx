@@ -42,7 +42,7 @@ function ConfirmationContent() {
                 <span className="text-xl">📧</span>
                 <div>
                   <p className="text-dark font-bold text-sm">Confirmation email on the way</p>
-                  <p className="text-dark/50 text-xs">Check your inbox — Square sends a receipt to {email || "your email"} within a few minutes.</p>
+                  <p className="text-dark/50 text-xs">Check your inbox — we just sent a receipt to {email || "your email"}. Square will also send a separate payment receipt.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
