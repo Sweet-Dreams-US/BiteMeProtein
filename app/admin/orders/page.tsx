@@ -39,6 +39,8 @@ interface Fulfillment {
 type SourceFilter = "all" | "online" | "in-person";
 type DateFilter = "today" | "7d" | "30d" | "90d" | "all";
 type StatusFilter = "all" | "new" | "preparing" | "shipped" | "delivered";
+type FulfillmentFilter = "all" | "pickup" | "shipping";
+type RefundFilter = "all" | "hide-refunded" | "only-refunded";
 
 const statusColors: Record<string, string> = {
   new: "bg-[#E3F2FD] text-[#1976D2]",
@@ -60,6 +62,32 @@ const dateFilterToIso = (f: DateFilter): string | null => {
 const isOnlineSource = (src: string | null): boolean =>
   !!src && src !== "Square Point of Sale" && src !== "Point of Sale";
 
+// Detect pickup orders from the raw Square response. Square stores
+// fulfillment type at raw.fulfillments[].type; we check both shapes because
+// webhook events nest differently (event.data.object.order vs the order
+// object itself).
+const isPickupOrder = (order: Order): boolean => {
+  const fulfillments = order.raw?.fulfillments ?? order.raw?.order?.fulfillments ?? [];
+  return Array.isArray(fulfillments)
+    && fulfillments.some((f: { type?: string }) => f?.type === "PICKUP");
+};
+
+// Display label for a workflow status. Pickup orders get different words
+// because "shipped" / "delivered" don't describe a bakery handing a box
+// across a counter. The DB status key (new / preparing / shipped /
+// delivered) stays constant so filters, reports, and automation don't
+// need to care about the label choice.
+const statusLabel = (order: Order, status: string): string => {
+  if (!isPickupOrder(order)) return status;
+  const pickupLabels: Record<string, string> = {
+    new: "new",
+    preparing: "baking",
+    shipped: "ready",
+    delivered: "picked up",
+  };
+  return pickupLabels[status] ?? status;
+};
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [fulfillments, setFulfillments] = useState<Record<string, Fulfillment>>({});
@@ -71,7 +99,13 @@ export default function AdminOrders() {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("30d");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [fulfillmentFilter, setFulfillmentFilter] = useState<FulfillmentFilter>("all");
+  const [refundFilter, setRefundFilter] = useState<RefundFilter>("all");
   const [search, setSearch] = useState("");
+
+  // Refunded order IDs (populated alongside orders fetch below). We key
+  // on order_id so one lookup covers all attached refunds.
+  const [refundedOrderIds, setRefundedOrderIds] = useState<Set<string>>(new Set());
 
   // Detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -107,9 +141,13 @@ export default function AdminOrders() {
 
       if (sinceIso) q = q.gte("created_at", sinceIso);
 
-      const [ordersRes, fulfillRes] = await Promise.all([
+      const [ordersRes, fulfillRes, refundsRes] = await Promise.all([
         q,
         supabase.from("order_fulfillment").select("*"),
+        // Only completed refunds count — pending Square refunds haven't
+        // actually moved money yet. status COMPLETED is the definitive
+        // "customer got their money back" signal.
+        supabase.from("square_refunds").select("order_id, status").eq("status", "COMPLETED"),
       ]);
 
       if (ordersRes.error) throw ordersRes.error;
@@ -138,6 +176,12 @@ export default function AdminOrders() {
         fulfillRes.data.forEach((f: Fulfillment) => { map[f.square_order_id] = f; });
         setFulfillments(map);
       }
+
+      const refundSet = new Set<string>();
+      for (const r of (refundsRes.data ?? []) as Array<{ order_id: string | null }>) {
+        if (r.order_id) refundSet.add(r.order_id);
+      }
+      setRefundedOrderIds(refundSet);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load");
     }
@@ -167,6 +211,7 @@ export default function AdminOrders() {
       .channel("admin_orders_realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "square_orders" }, () => fetchOrders())
       .on("postgres_changes", { event: "*", schema: "public", table: "order_fulfillment" }, () => fetchOrders())
+      .on("postgres_changes", { event: "*", schema: "public", table: "square_refunds" }, () => fetchOrders())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [fetchOrders]);
@@ -262,6 +307,21 @@ export default function AdminOrders() {
       })
       .filter((o) => statusFilter === "all" || getOrderStatus(o) === statusFilter)
       .filter((o) => {
+        // Only applies to online orders — POS orders don't have fulfillment
+        // metadata in raw.fulfillments, so "pickup/shipping" filter hides them.
+        if (fulfillmentFilter === "all") return true;
+        const online = isOnlineSource(o.source_name);
+        if (!online) return false;
+        const pickup = isPickupOrder(o);
+        return fulfillmentFilter === "pickup" ? pickup : !pickup;
+      })
+      .filter((o) => {
+        const refunded = refundedOrderIds.has(o.id);
+        if (refundFilter === "hide-refunded") return !refunded;
+        if (refundFilter === "only-refunded") return refunded;
+        return true;
+      })
+      .filter((o) => {
         if (!q) return true;
         const bucket = [
           o.id,
@@ -276,13 +336,23 @@ export default function AdminOrders() {
         return bucket.includes(q);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders, fulfillments, sourceFilter, statusFilter, search]);
+  }, [orders, fulfillments, refundedOrderIds, sourceFilter, statusFilter, fulfillmentFilter, refundFilter, search]);
 
   // Stats on the CURRENT date window
-  const totalInWindow = orders.filter((o) => o.state === "COMPLETED" || o.state === "OPEN").length;
-  const onlineCount = orders.filter((o) => isOnlineSource(o.source_name)).length;
+  const liveOrders = orders.filter((o) => o.state === "COMPLETED" || o.state === "OPEN");
+  const totalInWindow = liveOrders.length;
+  const onlineCount = liveOrders.filter((o) => isOnlineSource(o.source_name)).length;
   const inPersonCount = totalInWindow - onlineCount;
-  const needFulfillment = orders.filter((o) => getOrderStatus(o) === "new").length;
+  // Needs Fulfillment: only online orders that aren't refunded and are
+  // still in the early workflow states. In-person POS orders are handled at
+  // the register — they're done the moment the sale rings up, so counting
+  // them drowns out the real work queue.
+  const needFulfillment = liveOrders.filter((o) => {
+    if (!isOnlineSource(o.source_name)) return false;
+    if (refundedOrderIds.has(o.id)) return false;
+    const s = getOrderStatus(o);
+    return s === "new" || s === "preparing";
+  }).length;
 
   const inputClass =
     "w-full bg-[#FFF9F4] border border-[#e8ddd4] rounded-xl px-4 py-2.5 text-[#5a3e36] text-sm placeholder:text-[#c4b5aa] focus:border-[#E8A0BF] focus:ring-1 focus:ring-[#E8A0BF] focus:outline-none";
@@ -358,10 +428,50 @@ export default function AdminOrders() {
           className="bg-white border border-[#e8ddd4] rounded-lg px-3 py-2 text-sm">
           <option value="all">All statuses</option>
           <option value="new">New</option>
-          <option value="preparing">Preparing</option>
-          <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered</option>
+          <option value="preparing">Preparing / Baking</option>
+          <option value="shipped">Shipped / Ready</option>
+          <option value="delivered">Delivered / Picked up</option>
         </select>
+        <select value={fulfillmentFilter} onChange={(e) => setFulfillmentFilter(e.target.value as FulfillmentFilter)}
+          className="bg-white border border-[#e8ddd4] rounded-lg px-3 py-2 text-sm">
+          <option value="all">All types</option>
+          <option value="pickup">🏪 Pickup only</option>
+          <option value="shipping">📦 Shipping only</option>
+        </select>
+        <select value={refundFilter} onChange={(e) => setRefundFilter(e.target.value as RefundFilter)}
+          className="bg-white border border-[#e8ddd4] rounded-lg px-3 py-2 text-sm">
+          <option value="all">Refunds: all</option>
+          <option value="hide-refunded">Hide refunded</option>
+          <option value="only-refunded">Only refunded</option>
+        </select>
+      </div>
+
+      {/* Quick filters — one-click presets for the common work queues */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button
+          onClick={() => { setStatusFilter("new"); setSourceFilter("online"); setRefundFilter("hide-refunded"); setFulfillmentFilter("all"); }}
+          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#E3F2FD] text-[#1976D2] hover:brightness-95 transition-all"
+        >
+          🆕 Needs fulfillment
+        </button>
+        <button
+          onClick={() => { setStatusFilter("all"); setSourceFilter("all"); setRefundFilter("all"); setFulfillmentFilter("pickup"); }}
+          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#FFF0F5] text-burgundy hover:brightness-95 transition-all"
+        >
+          🏪 Pickup orders
+        </button>
+        <button
+          onClick={() => { setStatusFilter("shipped"); setSourceFilter("online"); setRefundFilter("hide-refunded"); setFulfillmentFilter("all"); }}
+          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-purple-50 text-purple-600 hover:brightness-95 transition-all"
+        >
+          📦 Ready / Shipped
+        </button>
+        <button
+          onClick={() => { setStatusFilter("all"); setSourceFilter("all"); setRefundFilter("all"); setFulfillmentFilter("all"); setSearch(""); }}
+          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#FFF5EE] text-[#7a6a62] hover:brightness-95 transition-all"
+        >
+          Clear all filters
+        </button>
       </div>
 
       {/* Orders list */}
@@ -400,10 +510,13 @@ export default function AdminOrders() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {refundedOrderIds.has(order.id) && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-red-50 text-red-500">💸 Refunded</span>
+                    )}
                     {f?.tracking_number && <span className="text-purple-500 text-[10px] font-bold">📦 Tracked</span>}
                     <span className="text-[#5a3e36] font-bold text-sm">{formatPrice(order.total_money_cents)}</span>
                     <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg ${statusColors[status] || "bg-[#FFF5EE] text-[#b0a098]"}`}>
-                      {status}
+                      {statusLabel(order, status)}
                     </span>
                   </div>
                 </div>
@@ -469,58 +582,34 @@ export default function AdminOrders() {
                   <div>
                     <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Status</label>
                     <div className="flex gap-1.5">
-                      {(() => {
-                        // Status keys stay the same in the DB (new / preparing /
-                        // shipped / delivered) so tests, filters, and existing
-                        // fulfillment rows don't break. For pickup orders the
-                        // button labels are re-skinned because "shipped" and
-                        // "delivered" don't describe what Haley actually does
-                        // (she boxes and hands it over, not FedEx).
-                        const isPickup = (() => {
-                          const fulfillments = selectedOrder.raw?.fulfillments ?? selectedOrder.raw?.order?.fulfillments ?? [];
-                          return Array.isArray(fulfillments)
-                            && fulfillments.some((f: { type?: string }) => f?.type === "PICKUP");
-                        })();
-                        const labels: Record<string, string> = isPickup
-                          ? { new: "new", preparing: "baking", shipped: "ready", delivered: "picked up" }
-                          : { new: "new", preparing: "preparing", shipped: "shipped", delivered: "delivered" };
-                        return ["new", "preparing", "shipped", "delivered"].map((s) => (
-                          <button key={s} onClick={() => setEditStatus(s)}
-                            className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
-                              editStatus === s ? `${statusColors[s]}` : "bg-[#FFF5EE] text-[#b0a098] hover:text-[#7a6a62]"
-                            }`}>
-                            {labels[s]}
-                          </button>
-                        ));
-                      })()}
+                      {["new", "preparing", "shipped", "delivered"].map((s) => (
+                        <button key={s} onClick={() => setEditStatus(s)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
+                            editStatus === s ? `${statusColors[s]}` : "bg-[#FFF5EE] text-[#b0a098] hover:text-[#7a6a62]"
+                          }`}>
+                          {statusLabel(selectedOrder, s)}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  {(editStatus === "shipped" || editStatus === "delivered") && (() => {
-                    // Hide carrier + tracking for pickup orders — Haley has no
-                    // tracking number for a treat she handed across the counter.
-                    const fulfillments = selectedOrder.raw?.fulfillments ?? selectedOrder.raw?.order?.fulfillments ?? [];
-                    const isPickup = Array.isArray(fulfillments)
-                      && fulfillments.some((f: { type?: string }) => f?.type === "PICKUP");
-                    if (isPickup) return null;
-                    return (
-                      <>
-                        <div>
-                          <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Carrier</label>
-                          <select value={editCarrier} onChange={(e) => setEditCarrier(e.target.value)} className={inputClass}>
-                            <option value="">Select carrier</option>
-                            <option value="USPS">USPS</option>
-                            <option value="UPS">UPS</option>
-                            <option value="FedEx">FedEx</option>
-                            <option value="DHL">DHL</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Tracking Number</label>
-                          <input type="text" value={editTracking} onChange={(e) => setEditTracking(e.target.value)} className={inputClass} placeholder="Enter tracking number" />
-                        </div>
-                      </>
-                    );
-                  })()}
+                  {(editStatus === "shipped" || editStatus === "delivered") && !isPickupOrder(selectedOrder) && (
+                    <>
+                      <div>
+                        <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Carrier</label>
+                        <select value={editCarrier} onChange={(e) => setEditCarrier(e.target.value)} className={inputClass}>
+                          <option value="">Select carrier</option>
+                          <option value="USPS">USPS</option>
+                          <option value="UPS">UPS</option>
+                          <option value="FedEx">FedEx</option>
+                          <option value="DHL">DHL</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Tracking Number</label>
+                        <input type="text" value={editTracking} onChange={(e) => setEditTracking(e.target.value)} className={inputClass} placeholder="Enter tracking number" />
+                      </div>
+                    </>
+                  )}
                   <div>
                     <label className="block text-[#7a6a62] text-xs font-semibold uppercase tracking-wider mb-1.5">Notes</label>
                     <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} className={inputClass} placeholder="Internal notes about this order..." />
@@ -552,9 +641,9 @@ export default function AdminOrders() {
                   >
                     <option value="">Manually send email…</option>
                     <option value="confirmation">Order confirmation</option>
-                    <option value="preparing">Preparing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
+                    <option value="preparing">{isPickupOrder(selectedOrder) ? "Baking" : "Preparing"}</option>
+                    <option value="shipped">{isPickupOrder(selectedOrder) ? "Ready for pickup" : "Shipped"}</option>
+                    <option value="delivered">{isPickupOrder(selectedOrder) ? "Picked up" : "Delivered"}</option>
                   </select>
                   <button
                     disabled={!emailAction || emailBusy}
