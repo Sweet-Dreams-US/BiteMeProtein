@@ -55,11 +55,25 @@ export async function POST(req: NextRequest) {
   const bodyText = await req.text();
 
   if (!verifySignature(req, bodyText)) {
+    // Diagnostic fields — remove once webhook verification is confirmed stable
+    const key = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "";
+    const url = process.env.SQUARE_WEBHOOK_NOTIFICATION_URL ?? new URL(req.url).toString();
+    const header = req.headers.get("x-square-hmacsha256-signature") ?? "";
+    const computedHmac = crypto.createHmac("sha256", key).update(url + bodyText).digest("base64");
     await logError("Invalid Square webhook signature", {
       path: "/api/webhooks/square",
       source: "webhook",
       level: "warn",
-      context: { hasHeader: !!req.headers.get("x-square-hmacsha256-signature") },
+      context: {
+        hasHeader: !!header,
+        sigHeaderPrefix: header.slice(0, 20),
+        computedPrefix: computedHmac.slice(0, 20),
+        keyLen: key.length,
+        urlUsed: url,
+        bodyLen: bodyText.length,
+        bodyStart: bodyText.slice(0, 80),
+        reqUrl: req.url,
+      },
     });
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
