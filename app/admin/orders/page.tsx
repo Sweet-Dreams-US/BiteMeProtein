@@ -132,6 +132,17 @@ export default function AdminOrders() {
   const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
   const [refunding, setRefunding] = useState(false);
   const [taggingEvent, setTaggingEvent] = useState(false);
+  // Pickup reschedule state — only relevant for pickup orders. The picker
+  // uses native datetime-local input so admins can pick any time. Server
+  // enforces "not in the past" + slot conflict checks.
+  const [reschedulingPickup, setReschedulingPickup] = useState(false);
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [rescheduleNewTime, setRescheduleNewTime] = useState("");
+  const [rescheduleReason, setRescheduleReason] = useState("");
+  // Current pickup time string for the selected order (read from raw
+  // fulfillment when the modal opens). Used to render "currently scheduled"
+  // info and seed the new-time input.
+  const [currentPickupAt, setCurrentPickupAt] = useState<string | null>(null);
 
   // Detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -259,6 +270,19 @@ export default function AdminOrders() {
     setAutoSendEmail(true);
     setEmailAction("");
     setEmailResult("");
+
+    // Pull pickup time from the raw Square fulfillment so the reschedule
+    // form can seed itself + show the current time. Same path-checking
+    // pattern we use for isPickupOrder() — webhook events nest the order
+    // differently (event.data.object.order vs the order object itself).
+    const fulfillmentsRaw = order.raw?.fulfillments ?? order.raw?.order?.fulfillments ?? [];
+    const pickupFulfillment = Array.isArray(fulfillmentsRaw)
+      ? fulfillmentsRaw.find((f: { type?: string }) => f?.type === "PICKUP")
+      : null;
+    setCurrentPickupAt(pickupFulfillment?.pickupDetails?.pickupAt ?? null);
+    setShowRescheduleForm(false);
+    setRescheduleNewTime("");
+    setRescheduleReason("");
   };
 
   const sendCustomerEmailFor = async (orderId: string, type: "confirmation" | "preparing" | "shipped" | "delivered" | "refunded") => {
@@ -316,6 +340,47 @@ export default function AdminOrders() {
   // endpoint calls Square's RefundPayment with the order's original
   // payment and upserts into square_refunds on success, so the Refunded
   // pill appears immediately.
+  // Move a pickup order's time slot. Server enforces "not in the past" +
+  // slot uniqueness; we surface the resulting message inline.
+  const reschedulePickup = async () => {
+    if (!selectedOrder) return;
+    if (!rescheduleNewTime) {
+      // eslint-disable-next-line no-alert
+      alert("Pick a new pickup date + time first");
+      return;
+    }
+    setReschedulingPickup(true);
+    try {
+      // datetime-local inputs come back without timezone — interpret as
+      // local time of the bakery (America/New_York). The browser does the
+      // local-zone interpretation already, then toISOString gives us UTC.
+      const newPickupAtIso = new Date(rescheduleNewTime).toISOString();
+      const res = await adminFetch(`/api/admin/orders/${selectedOrder.id}/reschedule-pickup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pickup_at: newPickupAtIso, reason: rescheduleReason || undefined }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error ?? "Reschedule failed");
+
+      // Refresh local view
+      setCurrentPickupAt(newPickupAtIso);
+      setShowRescheduleForm(false);
+      setRescheduleNewTime("");
+      setRescheduleReason("");
+      // eslint-disable-next-line no-alert
+      alert(j.emailedTo
+        ? `Pickup time updated. Customer notified at ${j.emailedTo}.`
+        : "Pickup time updated. (No customer email on file — they won't get an automatic notification.)");
+      fetchOrders();
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert(err instanceof Error ? err.message : "Reschedule failed");
+    } finally {
+      setReschedulingPickup(false);
+    }
+  };
+
   const refundOrder = async () => {
     if (!selectedOrder) return;
     const confirmed = window.confirm(
@@ -724,6 +789,84 @@ export default function AdminOrders() {
                   </div>
                 </div>
               </div>
+
+              {/* Pickup reschedule — only meaningful for pickup orders that
+                  haven't already been picked up. The button reveals a small
+                  inline form rather than a full modal because the rest of
+                  the detail panel is already a modal. */}
+              {isPickupOrder(selectedOrder) && currentPickupAt && editStatus !== "delivered" && (
+                <div className="border-t border-[#f0e6de] pt-4">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <label className="text-[#7a6a62] text-xs font-semibold uppercase tracking-wider">
+                      ⏰ Pickup time
+                    </label>
+                    {!showRescheduleForm && (
+                      <button
+                        onClick={() => {
+                          // Seed the input with the current pickup time formatted for
+                          // datetime-local (YYYY-MM-DDTHH:mm). Browser does the local-zone
+                          // conversion when we omit the seconds + Z suffix.
+                          const d = new Date(currentPickupAt);
+                          const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+                          setRescheduleNewTime(local.toISOString().slice(0, 16));
+                          setShowRescheduleForm(true);
+                        }}
+                        className="text-xs text-[#843430] font-bold hover:underline"
+                      >
+                        Reschedule →
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[#5a3e36] text-sm mb-2">
+                    Currently scheduled: <strong>{new Date(currentPickupAt).toLocaleString("en-US", {
+                      timeZone: "America/New_York",
+                      weekday: "short", month: "short", day: "numeric",
+                      hour: "numeric", minute: "2-digit", hour12: true,
+                    })}</strong>
+                  </p>
+                  {showRescheduleForm && (
+                    <div className="bg-[#FFF5EE] border border-[#f0e6de] rounded-xl p-3 space-y-2">
+                      <div>
+                        <label className="block text-[#7a6a62] text-[11px] font-semibold uppercase tracking-wider mb-1">New pickup time</label>
+                        <input
+                          type="datetime-local"
+                          value={rescheduleNewTime}
+                          onChange={(e) => setRescheduleNewTime(e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[#7a6a62] text-[11px] font-semibold uppercase tracking-wider mb-1">
+                          Reason for change <span className="text-[#b0a098] normal-case font-normal">(shown to customer)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={rescheduleReason}
+                          onChange={(e) => setRescheduleReason(e.target.value)}
+                          placeholder="e.g. Oven repair this morning, sorry for the inconvenience"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setShowRescheduleForm(false); setRescheduleNewTime(""); setRescheduleReason(""); }}
+                          disabled={reschedulingPickup}
+                          className="flex-1 border border-[#e8ddd4] text-[#7a6a62] py-2 rounded-xl text-xs font-semibold hover:bg-white"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={reschedulePickup}
+                          disabled={reschedulingPickup || !rescheduleNewTime}
+                          className="flex-1 bg-[#843430] text-white py-2 rounded-xl text-xs font-bold hover:bg-[#6e2a27] disabled:opacity-50"
+                        >
+                          {reschedulingPickup ? "Saving…" : "Save + email customer"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Event tagging — useful for in-person POS sales at Haley's
                   tent events. Also available on online orders in case you

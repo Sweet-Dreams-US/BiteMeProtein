@@ -12,7 +12,7 @@
 
 import { logError } from "@/lib/log-error";
 
-export type CustomerEmailType = "confirmation" | "preparing" | "shipped" | "delivered" | "refunded";
+export type CustomerEmailType = "confirmation" | "preparing" | "shipped" | "delivered" | "refunded" | "pickup-rescheduled";
 
 export interface OrderEmailItem {
   name: string;
@@ -360,6 +360,44 @@ export async function sendOrderDelivered(data: OrderEmailData): Promise<void> {
 
 // ── Dispatcher for API route ────────────────────────────────────────────────
 
+export async function sendPickupRescheduled(
+  data: OrderEmailData & { previousPickupAt?: string; reason?: string },
+): Promise<void> {
+  if (!data.buyerEmail || !data.pickupAt) return;
+
+  const oldTime = data.previousPickupAt ? formatPickupTime(data.previousPickupAt) : "your original time";
+  const newTime = formatPickupTime(data.pickupAt);
+  const reasonBlock = data.reason
+    ? `<p style="margin:12px 0 0;color:#7a6a62;font-size:13px;"><em>${data.reason}</em></p>`
+    : "";
+
+  const body = `Heads up — we needed to move your pickup time. Your order is still good, just at a different slot.
+    <div style="margin:16px 0 8px;padding:14px 16px;background:#FFF0F5;border-left:3px solid #E8A0BF;border-radius:6px;color:#5a3e36;">
+      <p style="margin:0 0 6px;color:#7a6a62;font-size:13px;text-decoration:line-through;">Was: ${oldTime}</p>
+      <p style="margin:0 0 6px;"><strong>🏪 New pickup:</strong> ${newTime}</p>
+      <p style="margin:0 0 8px;color:#7a6a62;font-size:13px;">953 E Oakland Park Blvd, Oakland Park, FL 33334</p>
+      <p style="margin:0;color:#5a3e36;font-size:13px;"><strong>When you arrive:</strong> call or text <a href="tel:+19546044127" style="color:#843430;font-weight:bold;text-decoration:none;">(954) 604-4127</a> and we'll bring your order out to you.</p>
+    </div>
+    ${reasonBlock}
+    If the new time doesn't work, reply to this email or text <a href="tel:+19546044127" style="color:#843430;font-weight:bold;text-decoration:none;">(954) 604-4127</a> and we'll work it out.`;
+
+  const html = buildEmail({
+    headerEmoji: "⏰",
+    headerTitle: "Your pickup time changed",
+    greeting: greeting(data),
+    body,
+    data,
+    cta: { label: "View order", url: data.trackUrl },
+  });
+
+  await sendViaResend({
+    to: data.buyerEmail,
+    subject: `⏰ Pickup time updated — Bite Me order #${data.shortId}`,
+    html,
+    context: { orderId: data.orderId, type: "pickup-rescheduled" },
+  });
+}
+
 export async function sendOrderRefunded(data: OrderEmailData & { refundAmountCents?: number }): Promise<void> {
   if (!data.buyerEmail) return;
 
@@ -395,6 +433,7 @@ export async function sendCustomerEmail(type: CustomerEmailType, data: OrderEmai
     case "shipped": return sendOrderShipped(data);
     case "delivered": return sendOrderDelivered(data);
     case "refunded": return sendOrderRefunded(data);
+    case "pickup-rescheduled": return sendPickupRescheduled(data);
   }
 }
 
