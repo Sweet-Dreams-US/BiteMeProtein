@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import ProductImageManager from "@/components/admin/ProductImageManager";
 import { supabase } from "@/lib/supabase";
 import { adminFetch } from "@/lib/admin-fetch";
 
@@ -341,9 +342,9 @@ export default function AdminProducts() {
       {editingEnrichment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditingEnrichment(null)}>
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl p-7 border border-[#f0e6de] w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-white rounded-2xl p-7 border border-[#f0e6de] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-[#5a3e36] text-lg font-bold mb-1">Website Details</h3>
-            <p className="text-[#b0a098] text-xs mb-5">Extra info shown on the website (not in Square)</p>
+            <p className="text-[#b0a098] text-xs mb-5">Extra info + photos shown on the website (not in Square)</p>
 
             <div className="space-y-4">
               <div>
@@ -404,6 +405,16 @@ export default function AdminProducts() {
                   className={`w-11 h-6 rounded-full transition-colors relative ${editingEnrichment.is_visible ? "bg-green-400" : "bg-[#e0d5cc]"}`}>
                   <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${editingEnrichment.is_visible ? "left-6" : "left-1"}`} />
                 </button>
+              </div>
+
+              {/* Photos — directly inline with the rest of the website-only
+                  metadata. ProductImageManager handles upload, reorder,
+                  delete on its own with optimistic UI; saves don't need to
+                  go through the modal's Save button. */}
+              <div className="border-t border-[#f0e6de] pt-4">
+                <p className="text-[#5a3e36] text-sm font-semibold mb-1">📸 Photos</p>
+                <p className="text-[#b0a098] text-xs mb-3">Upload, reorder, or delete the product photos shown on the website. Saves automatically — no need to hit Save Details.</p>
+                <ProductImageManager squareProductId={editingEnrichment.square_catalog_id} />
               </div>
             </div>
 
