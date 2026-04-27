@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { adminFetch } from "@/lib/admin-fetch";
+import ShippingLabelPanel from "@/components/admin/ShippingLabelPanel";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -789,6 +790,17 @@ export default function AdminOrders() {
                   </div>
                 </div>
               </div>
+
+              {/* Shipping label — only for SHIPMENT orders. The panel
+                  fetches its own fulfillment row + manages the rates →
+                  buy → label-bought UI states internally. After a
+                  successful buy it triggers fetchOrders so the order list
+                  reflects the new tracking number without a manual refresh. */}
+              {!isPickupOrder(selectedOrder) && (
+                <div className="border-t border-[#f0e6de] pt-4">
+                  <ShippingLabelPanel orderId={selectedOrder.id} onLabelBought={fetchOrders} />
+                </div>
+              )}
 
               {/* Pickup reschedule — only meaningful for pickup orders that
                   haven't already been picked up. The button reveals a small
