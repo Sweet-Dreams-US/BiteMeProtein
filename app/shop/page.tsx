@@ -11,6 +11,7 @@ import { brand } from "@/lib/brand";
 import { supabase } from "@/lib/supabase";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
+import { SHIPPING_ENABLED } from "@/lib/feature-flags";
 
 interface Variation {
   id: string;
@@ -255,7 +256,7 @@ function ShopContent() {
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="text-dark/50 text-lg max-w-md mx-auto">
-            Pick a size, fill it with your favorites, and we&apos;ll ship it fresh.
+            Pick a size, fill it with your favorites, and we&apos;ll bake it fresh for pickup.
           </motion.p>
         </div>
       </section>
@@ -285,14 +286,17 @@ function ShopContent() {
                       onClick={() => handleStartBundle(tier)}
                       className={`w-full text-left card-bakery p-6 relative overflow-hidden transition-all ${
                         selectedTier?.id === tier.id ? "ring-2 ring-[#E8A0BF] shadow-lg" : "hover:shadow-md"
-                      } ${tier.shipping_eligible ? "border-2 border-green-300" : ""}`}
+                      } ${SHIPPING_ENABLED && tier.shipping_eligible ? "border-2 border-green-300" : ""}`}
                     >
-                      {tier.shipping_eligible && (
+                      {SHIPPING_ENABLED && tier.shipping_eligible && (
                         <span className="absolute top-3 right-3 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
                           Ships ✓
                         </span>
                       )}
-                      {tier.pickup_only && (
+                      {/* When shipping is disabled, every bundle is effectively pickup-only.
+                          Hide the explicit "Pickup only" badge to avoid making the page look
+                          full of warnings — pickup is just the default. */}
+                      {SHIPPING_ENABLED && tier.pickup_only && (
                         <span className="absolute top-3 right-3 bg-orange-50 text-orange-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
                           Pickup only
                         </span>
@@ -304,7 +308,7 @@ function ShopContent() {
                       <p className="text-dark/30 text-xs mt-1">
                         {formatPrice(Math.round(tier.price_cents / tier.item_count))} per treat
                       </p>
-                      {tier.shipping_eligible && tier.shipping_cost_cents ? (
+                      {SHIPPING_ENABLED && tier.shipping_eligible && tier.shipping_cost_cents ? (
                         <p className="text-green-600 text-xs font-semibold mt-2">
                           🧊 Cold pack shipping: +{formatPrice(tier.shipping_cost_cents)}
                         </p>

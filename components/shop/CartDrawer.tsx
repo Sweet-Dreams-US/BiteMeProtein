@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/lib/cart";
+import { SHIPPING_ENABLED } from "@/lib/feature-flags";
 
 export default function CartDrawer() {
   const router = useRouter();
@@ -59,7 +60,7 @@ export default function CartDrawer() {
                       <h3 className="text-[#5a3e36] font-bold text-sm">{bundle.tier.name}</h3>
                       <p className="text-[#b0a098] text-xs">
                         {count}/{bundle.tier.item_count} items • {formatPrice(bundle.tier.price_cents)}
-                        {bundle.tier.shipping_eligible && <span className="text-green-600 ml-1">• Ships ✓</span>}
+                        {SHIPPING_ENABLED && bundle.tier.shipping_eligible && <span className="text-green-600 ml-1">• Ships ✓</span>}
                       </p>
                     </div>
                     <button onClick={() => removeBundle(bi)} className="text-[#b0a098] hover:text-red-500 text-xs">Remove</button>
@@ -128,7 +129,7 @@ export default function CartDrawer() {
               <span className="text-[#5a3e36] font-semibold">{formatPrice(totalPrice)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-[#b0a098]">Shipping &amp; tax</span>
+              <span className="text-[#b0a098]">{SHIPPING_ENABLED ? "Shipping & tax" : "Tax"}</span>
               <span className="text-[#b0a098] text-xs">Calculated at checkout</span>
             </div>
             <div className="h-px bg-[#f0e6de] my-1" />

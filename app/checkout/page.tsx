@@ -6,6 +6,7 @@ import { PaymentForm, CreditCard } from "react-square-web-payments-sdk";
 import { useCart } from "@/lib/cart";
 import Link from "next/link";
 import PickupPicker, { PickupSelection } from "@/components/checkout/PickupPicker";
+import { SHIPPING_ENABLED } from "@/lib/feature-flags";
 
 interface ShippingOption {
   service: string;
@@ -43,7 +44,13 @@ export default function CheckoutPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [orderType, setOrderType] = useState<"pickup" | "shipping">(hasShippableBundle ? "shipping" : "pickup");
+  // When the SHIPPING_ENABLED feature flag is off, force pickup regardless
+  // of bundle eligibility — keeps customers on the working flow while we
+  // sort out the label-printing integration. Admin still sees the full
+  // shipping order pipeline for any historical shipping orders.
+  const [orderType, setOrderType] = useState<"pickup" | "shipping">(
+    SHIPPING_ENABLED && hasShippableBundle ? "shipping" : "pickup"
+  );
   const [address1, setAddress1] = useState("");
   const [address2, setAddress2] = useState("");
   const [city, setCity] = useState("");
@@ -332,8 +339,10 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Fulfillment */}
-            {hasShippableBundle && (
+            {/* Fulfillment — only shown when shipping is enabled AND the
+                cart has a shippable bundle. With SHIPPING_ENABLED off the
+                whole card hides; checkout becomes pickup-only. */}
+            {SHIPPING_ENABLED && hasShippableBundle && (
               <div className="card-bakery p-6 md:p-8">
                 <h2 className="font-fun text-burgundy text-xl mb-4">Delivery method</h2>
                 <div className="grid grid-cols-2 gap-3 mb-4">

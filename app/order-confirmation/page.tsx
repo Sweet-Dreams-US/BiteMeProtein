@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
+import { SHIPPING_ENABLED } from "@/lib/feature-flags";
 
 function ConfirmationContent() {
   const searchParams = useSearchParams();
@@ -52,13 +53,23 @@ function ConfirmationContent() {
                   <p className="text-dark/50 text-xs">Small-batch fresh — usually out the kitchen within 1-2 business days.</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xl">📦</span>
-                <div>
-                  <p className="text-dark font-bold text-sm">Tracking info coming</p>
-                  <p className="text-dark/50 text-xs">Once we ship, your tracking number will show up on the order status page below.</p>
+              {SHIPPING_ENABLED ? (
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">📦</span>
+                  <div>
+                    <p className="text-dark font-bold text-sm">Tracking info coming</p>
+                    <p className="text-dark/50 text-xs">Once we ship, your tracking number will show up on the order status page below.</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">🏪</span>
+                  <div>
+                    <p className="text-dark font-bold text-sm">Pickup at the bakery</p>
+                    <p className="text-dark/50 text-xs">953 E Oakland Park Blvd, Oakland Park, FL 33334. When you arrive, call (954) 604-4127 and we&apos;ll bring your order out.</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {orderId && email && (
