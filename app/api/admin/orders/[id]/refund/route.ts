@@ -13,12 +13,27 @@ import { sendOrderRefunded } from "@/lib/customer-emails";
  * checkout endpoint where Square's API expects numeric JSON. REST takes
  * a plain Number and just works.
  */
+interface SquareRefund {
+  id?: string;
+  status?: string;
+  created_at?: string;
+  createdAt?: string;
+  amount_money?: { amount?: number; currency?: string };
+  payment_id?: string;
+  order_id?: string;
+}
+
+interface SquareErrorBody {
+  errors?: Array<{ detail?: string; code?: string }>;
+  refund?: SquareRefund;
+}
+
 async function squareRefundPayment(input: {
   idempotencyKey: string;
   paymentId: string;
   amountCents: number;
   reason: string;
-}): Promise<{ refund: any; error?: string }> {
+}): Promise<{ refund: SquareRefund | null; error?: string }> {
   const token = process.env.SQUARE_ACCESS_TOKEN?.trim();
   if (!token) throw new Error("SQUARE_ACCESS_TOKEN not configured");
   const res = await fetch("https://connect.squareup.com/v2/refunds", {
@@ -36,14 +51,14 @@ async function squareRefundPayment(input: {
       reason: input.reason,
     }),
   });
-  const body: any = await res.json().catch(() => ({}));
+  const body: SquareErrorBody = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = body?.errors?.[0]?.detail
       ?? body?.errors?.[0]?.code
       ?? `Square ${res.status}`;
     return { refund: null, error: detail };
   }
-  return { refund: body.refund };
+  return { refund: body.refund ?? null };
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
