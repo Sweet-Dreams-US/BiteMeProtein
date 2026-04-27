@@ -188,7 +188,12 @@ export async function POST(
         }
       }
 
-      return NextResponse.json({ ok: true, refund });
+      // Sanitize the refund object before returning — Square's SDK
+      // response contains BigInt money values, and Next.js JSON.stringify
+      // throws on BigInt. Without stripBigInts the whole admin-facing
+      // refund flow shows a "do not know how to serialize a BigInt" popup
+      // even though the refund itself succeeded server-side.
+      return NextResponse.json({ ok: true, refund: stripBigInts(refund) });
     } catch (squareErr: any) {
       const detail = squareErr?.errors?.[0]?.detail
         ?? squareErr?.body?.errors?.[0]?.detail
