@@ -42,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "happy-dom": "^20.9.0",
+    "png-to-ico": "^3.0.1",
     "supabase": "^2.92.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
