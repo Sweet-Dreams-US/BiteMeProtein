@@ -159,6 +159,27 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* ===== IN THE KITCHEN — wide action shots =====
+          Three wide-orientation photos sit nicely under the "Behind the
+          Bite" prose section: candid baking shots tied to the narrative
+          of "made by Haley + mom." Aspect-video keeps them matching the
+          home-page lifestyle grid rhythm. */}
+      <section className="py-4 bg-cream">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <ScrollReveal className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
+              <Image src={images.about.haleyBakingWide1} alt="Haley baking" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+            </ScrollReveal>
+            <ScrollReveal delay={0.1} className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
+              <Image src={images.about.haleyHoldingBananaWide} alt="Haley with banana" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+            </ScrollReveal>
+            <ScrollReveal delay={0.2} className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
+              <Image src={images.about.haleyBakingWide2} alt="In the kitchen" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
       {/* ===== BRAND STATEMENT ===== */}
       <section className="py-20 bg-burgundy relative overflow-hidden">
         <div className="absolute top-6 right-10 w-16 h-16 rounded-full bg-white/10 animate-float" />

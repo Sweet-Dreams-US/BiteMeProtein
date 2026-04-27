@@ -15,10 +15,11 @@
  *   - "Ships ✓" badges on bundle cards in /shop are hidden.
  *   - Shipping address + FedEx rate fetch are skipped entirely.
  *
- * Re-enable when:
- *   - EasyPost (or another label provider) is wired up so admin can
- *     actually print FedEx labels from the order detail panel, AND
- *   - At least one full end-to-end shipping test order has succeeded
- *     (label printed, customer received tracking, package arrived).
+ * Currently TRUE: shipping orders flow through normally; admin prints
+ * the actual FedEx label from Square Dashboard (deep-link in
+ * /admin/orders → Open in Square Dashboard) using all the recipient
+ * info we pass through in fulfillments[].shipmentDetails. Once
+ * EasyPost API access lands we'll switch to integrated label printing
+ * inside our admin without flipping this flag again.
  */
-export const SHIPPING_ENABLED = false;
+export const SHIPPING_ENABLED = true;
