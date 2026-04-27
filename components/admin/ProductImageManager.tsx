@@ -20,13 +20,20 @@ import type { ProductImage } from "@/lib/product-images";
 
 interface Props {
   squareProductId?: string;
+  /**
+   * Product display name. Forwarded to the upload route so the lazy
+   * `square_products` parent-row upsert (the workaround for the catalog
+   * sync not having run yet) has at least a human-readable name on it
+   * instead of an empty stub. See route.ts header comment.
+   */
+  productName?: string;
   slug?: string;
   label?: string;
 }
 
 const BUCKET = "productPhotos";
 
-export default function ProductImageManager({ squareProductId, slug, label }: Props) {
+export default function ProductImageManager({ squareProductId, productName, slug, label }: Props) {
   const [images, setImages] = useState<ProductImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -87,6 +94,7 @@ export default function ProductImageManager({ squareProductId, slug, label }: Pr
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             squareProductId,
+            productName,
             slug,
             url: publicData.publicUrl,
             kind: "product",

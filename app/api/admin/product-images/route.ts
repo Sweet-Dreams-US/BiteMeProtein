@@ -7,9 +7,16 @@ import { logError } from "@/lib/log-error";
  * /api/admin/product-images
  *
  * POST   — attach a newly-uploaded image to a product
- *          body: { squareProductId?: string, slug?: string, url, kind, alt?, sort_order? }
+ *          body: { squareProductId?: string, productName?: string, slug?: string, url, kind, alt?, sort_order? }
  * PATCH  — reorder: body: { updates: Array<{ id, sort_order }> }
  * DELETE — body: { id } or ?id=<uuid>
+ *
+ * NOTE on `squareProductId`: product_images.square_product_id has an FK to
+ * square_products(id), but the catalog sync that populates square_products
+ * hasn't been running reliably. To keep uploads working without depending
+ * on that sync, we lazily upsert a stub square_products row before the
+ * image insert. When the real catalog sync eventually lands, it will
+ * overwrite our placeholder `raw: {}` payload with the full Square data.
  */
 
 function getServiceClient() {
@@ -26,8 +33,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { squareProductId, slug, url, kind, alt, sort_order } = body as {
+    const { squareProductId, productName, slug, url, kind, alt, sort_order } = body as {
       squareProductId?: string;
+      productName?: string;
       slug?: string;
       url?: string;
       kind?: "product" | "nutrition" | "lifestyle";
@@ -44,6 +52,31 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getServiceClient();
+
+    // Lazy parent upsert — see header comment. Idempotent via
+    // ignoreDuplicates, so re-uploading for the same product doesn't
+    // overwrite an already-synced row. Only runs when the caller passes
+    // a Square catalog ID; slug-only uploads skip this entirely.
+    if (squareProductId) {
+      const { error: parentErr } = await supabase
+        .from("square_products")
+        .upsert(
+          { id: squareProductId, name: productName ?? null, raw: {} },
+          { onConflict: "id", ignoreDuplicates: true },
+        );
+      if (parentErr) {
+        await logError(parentErr, {
+          path: "/api/admin/product-images:POST",
+          source: "api-route",
+          context: { squareProductId, step: "ensure-parent" },
+        });
+        return NextResponse.json(
+          { error: `Failed to attach product reference: ${parentErr.message}` },
+          { status: 500 },
+        );
+      }
+    }
+
     const { data, error } = await supabase
       .from("product_images")
       .insert({

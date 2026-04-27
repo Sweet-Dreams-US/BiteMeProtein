@@ -423,6 +423,7 @@ export default function AdminProducts() {
                     instead of getting stranded under just the catalog id. */}
                 <ProductImageManager
                   squareProductId={editingEnrichment.square_catalog_id}
+                  productName={products.find(p => p.id === editingEnrichment.square_catalog_id)?.name}
                   slug={slugForProductName(products.find(p => p.id === editingEnrichment.square_catalog_id)?.name)}
                 />
               </div>
