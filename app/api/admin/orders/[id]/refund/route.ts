@@ -101,10 +101,15 @@ export async function POST(
 
     try {
       const square = getSquareClient();
+      // Pass amount as a Number (not BigInt). Square SDK v44 throws "Do
+      // not know how to serialize a BigInt" inside its refunds module
+      // even though their types accept bigint. Money in cents fits well
+      // within Number's 2^53 safe range — no precision loss possible for
+      // any plausible refund amount.
       const refundResp: any = await (square.refunds as any).refundPayment({
         idempotencyKey: crypto.randomUUID(),
         paymentId,
-        amountMoney: { amount: BigInt(amountCents), currency: "USD" },
+        amountMoney: { amount: Number(amountCents), currency: "USD" },
         reason,
       });
 
