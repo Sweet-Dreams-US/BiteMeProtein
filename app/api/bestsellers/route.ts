@@ -150,9 +150,27 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // POS-only line names that aren't real catalog products — Haley uses
+    // these as Square POS shortcut buttons for bundle pricing at events.
+    // Without this filter they dominate the bestseller list (they're rung
+    // up more than any single product) but render as gradient placeholders
+    // on the homepage because they have no images and no real catalog row.
+    const POS_ONLY_BUNDLE_NAMES = new Set([
+      "Trainer Deal",
+      "2 For 10",
+      "3 For 20",
+      "2 For 15",
+      "5 For 25",  // future-proofing common bundle SKUs
+      "Custom Amount",
+      "Tip",
+    ]);
+
     const items = Array.from(agg.values())
+      // Filter out POS-only bundle items by exact name match. Cheap and
+      // surgical — doesn't touch real product names that happen to share
+      // a digit (e.g., "2x Brownies" wouldn't accidentally match).
+      .filter((row) => !POS_ONLY_BUNDLE_NAMES.has(row.name))
       .sort((a, b) => b.total_sold - a.total_sold)
-      .slice(0, limit)
       .map((row) => {
         // 1. variation → product → product_images by square_product_id
         let image: ProductImageRow | undefined;
@@ -173,7 +191,15 @@ export async function GET(req: NextRequest) {
           image_url: image?.url ?? null,
           image_alt: image?.alt ?? null,
         };
-      });
+      })
+      // Drop items that didn't resolve to an image. Two reasons:
+      //   1. Without a photo the homepage card is just a gradient — looks
+      //      like a broken placeholder.
+      //   2. Anything we couldn't match to product_images probably isn't a
+      //      real catalog product anyway (custom POS button, voided line,
+      //      etc.) — same class of noise as the bundle filter above.
+      .filter((row) => row.image_url !== null)
+      .slice(0, limit);
 
     return NextResponse.json({ items, source: "sales" });
   } catch (err) {

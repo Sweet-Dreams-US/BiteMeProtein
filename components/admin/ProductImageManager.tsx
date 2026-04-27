@@ -37,9 +37,23 @@ export default function ProductImageManager({ squareProductId, slug, label }: Pr
     setLoading(true);
     setError("");
     let q = supabase.from("product_images").select("*").order("sort_order", { ascending: true });
-    if (squareProductId) q = q.eq("square_product_id", squareProductId);
-    else if (slug) q = q.eq("slug", slug);
-    else { setImages([]); setLoading(false); return; }
+
+    // Show images keyed by EITHER identifier so admins see legacy
+    // slug-keyed photos alongside any newly-uploaded square_product_id-
+    // keyed ones. Existing public-site photos were all written with slug
+    // before the catalog sync existed; uploads from this admin attach
+    // both so they show up everywhere.
+    if (squareProductId && slug) {
+      q = q.or(`square_product_id.eq.${squareProductId},slug.eq.${slug}`);
+    } else if (squareProductId) {
+      q = q.eq("square_product_id", squareProductId);
+    } else if (slug) {
+      q = q.eq("slug", slug);
+    } else {
+      setImages([]);
+      setLoading(false);
+      return;
+    }
 
     const { data, error: queryErr } = await q;
     if (queryErr) setError(queryErr.message);

@@ -403,18 +403,21 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== LIFESTYLE PHOTO GRID ===== */}
+      {/* ===== LIFESTYLE PHOTO GRID =====
+          Mix of fresh hero shots (AllBitesWide group shot, TeddyBearBites)
+          and the original lifestyle backgrounds. Wide aspect-video tiles
+          fit the wide-orientation new photos perfectly. */}
       <section className="py-4 bg-cream">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-4">
             <ScrollReveal className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
-              <Image src={images.lifestyle.blueberryMuffinPurple[0]} alt="Blueberry muffin" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+              <Image src={images.hero.allBitesWide} alt="Every Bite Me bite, lined up" fill className="object-cover hover:scale-105 transition-transform duration-700" />
             </ScrollReveal>
             <ScrollReveal delay={0.1} className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
               <Image src={images.lifestyle.chocChipHeartBrownies} alt="Heart brownies" fill className="object-cover hover:scale-105 transition-transform duration-700" />
             </ScrollReveal>
             <ScrollReveal delay={0.2} className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
-              <Image src={images.lifestyle.chocChipRaspberryRed[0]} alt="Raspberry banana bread" fill className="object-cover hover:scale-105 transition-transform duration-700" />
+              <Image src={images.hero.teddyBearBitesWide} alt="Teddy bear shaped bites" fill className="object-cover hover:scale-105 transition-transform duration-700" />
             </ScrollReveal>
             <ScrollReveal delay={0.3} className="aspect-video rounded-2xl overflow-hidden relative shadow-lg">
               <Image src={images.lifestyle.chocTrufflesRed} alt="Chocolate truffles" fill className="object-cover hover:scale-105 transition-transform duration-700" />

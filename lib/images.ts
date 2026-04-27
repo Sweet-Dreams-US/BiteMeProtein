@@ -76,5 +76,28 @@ export const images = {
     haley2: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/IMG_3832.jpg",
     haley3: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/IMG_7258%202.jpg",
     haley4: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/IMG_8248.JPG",
+    // Newer in-kitchen action shots — wide for hero/about hero spots,
+    // vertical for portrait-orientation card slots.
+    haleyBakingWide1: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/HaleyBakingWide.JPG",
+    haleyBakingWide2: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/HaleyBakingWide2.JPG",
+    haleyHoldingBananaWide: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/HaleyHoldingBananaWide.JPG",
+    haleySmilingBakingVertical: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/HaleysmilingBakingVertical.JPG",
+  },
+
+  // Process / behind-the-scenes shots — for "The Oven" page or any
+  // section showing how things are made. All wide-orientation.
+  process: {
+    fillingTrays: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/FillingTraysWide.JPG",
+    placingBitesTrays: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/PlacingBitesTraysWide.JPG",
+    allBitesTraysFreshVertical: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/AllBitesTraysFreshVertical.JPG",
+  },
+
+  // Hero / collection shots — every-product spreads, big group images.
+  hero: {
+    allBitesWide: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/AllBitesWide.JPG",
+    allBitesAloneVertical: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/AllBitesAloneVertical.JPG",
+    allBitesVertical: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/AllBitesVertical.JPG",
+    allBitesVertical2: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/AllBitesVertical2.JPG",
+    teddyBearBitesWide: "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/pictures/TeddyBearBitesWide.JPG",
   },
 } as const;

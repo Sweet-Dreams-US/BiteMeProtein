@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import ProductImageManager from "@/components/admin/ProductImageManager";
+import { slugForProductName } from "@/lib/product-slugs";
 import { supabase } from "@/lib/supabase";
 import { adminFetch } from "@/lib/admin-fetch";
 
@@ -414,7 +415,16 @@ export default function AdminProducts() {
               <div className="border-t border-[#f0e6de] pt-4">
                 <p className="text-[#5a3e36] text-sm font-semibold mb-1">📸 Photos</p>
                 <p className="text-[#b0a098] text-xs mb-3">Upload, reorder, or delete the product photos shown on the website. Saves automatically — no need to hit Save Details.</p>
-                <ProductImageManager squareProductId={editingEnrichment.square_catalog_id} />
+                {/* Pass BOTH the Square catalog id AND a derived legacy
+                    slug (e.g. chocChipBananaBread). The slug bridges this
+                    admin UI to existing public-site image lookups in
+                    lib/images.ts + product_images.slug rows, so newly
+                    uploaded photos appear on the storefront immediately
+                    instead of getting stranded under just the catalog id. */}
+                <ProductImageManager
+                  squareProductId={editingEnrichment.square_catalog_id}
+                  slug={slugForProductName(products.find(p => p.id === editingEnrichment.square_catalog_id)?.name)}
+                />
               </div>
             </div>
 
