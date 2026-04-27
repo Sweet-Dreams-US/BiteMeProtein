@@ -1,11 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
-import { getSquareClient } from "@/lib/square";
 import { requireAdmin } from "@/lib/admin-auth";
 import { logError } from "@/lib/log-error";
 import { stripBigInts } from "@/lib/sync/json-safe";
 import { sendOrderRefunded } from "@/lib/customer-emails";
+
+/**
+ * Square REST refund call — bypasses the SDK because Square SDK v44's
+ * refunds module requires BigInt as input AND fails to JSON-stringify
+ * BigInt without a polyfill. Adding the polyfill globally breaks the
+ * checkout endpoint where Square's API expects numeric JSON. REST takes
+ * a plain Number and just works.
+ */
+async function squareRefundPayment(input: {
+  idempotencyKey: string;
+  paymentId: string;
+  amountCents: number;
+  reason: string;
+}): Promise<{ refund: any; error?: string }> {
+  const token = process.env.SQUARE_ACCESS_TOKEN?.trim();
+  if (!token) throw new Error("SQUARE_ACCESS_TOKEN not configured");
+  const res = await fetch("https://connect.squareup.com/v2/refunds", {
+    method: "POST",
+    headers: {
+      "Square-Version": "2024-10-17",
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify({
+      idempotency_key: input.idempotencyKey,
+      payment_id: input.paymentId,
+      amount_money: { amount: input.amountCents, currency: "USD" },
+      reason: input.reason,
+    }),
+  });
+  const body: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = body?.errors?.[0]?.detail
+      ?? body?.errors?.[0]?.code
+      ?? `Square ${res.status}`;
+    return { refund: null, error: detail };
+  }
+  return { refund: body.refund };
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -100,20 +139,16 @@ export async function POST(
     if (initErr) throw initErr;
 
     try {
-      const square = getSquareClient();
-      // Pass amount as a Number (not BigInt). Square SDK v44 throws "Do
-      // not know how to serialize a BigInt" inside its refunds module
-      // even though their types accept bigint. Money in cents fits well
-      // within Number's 2^53 safe range — no precision loss possible for
-      // any plausible refund amount.
-      const refundResp: any = await (square.refunds as any).refundPayment({
+      // Direct REST instead of SDK — see squareRefundPayment() above for why.
+      const { refund, error: restErr } = await squareRefundPayment({
         idempotencyKey: crypto.randomUUID(),
         paymentId,
-        amountMoney: { amount: Number(amountCents), currency: "USD" },
+        amountCents,
         reason,
       });
-
-      const refund = refundResp.refund ?? refundResp.result?.refund;
+      if (restErr || !refund) {
+        throw new Error(restErr ?? "Square returned no refund");
+      }
       const refundId = refund?.id;
 
       // Mark initiation completed. The eventual webhook will also populate
@@ -134,7 +169,10 @@ export async function POST(
           id: refundId,
           payment_id: paymentId,
           order_id: orderId,
-          created_at: refund?.createdAt ?? new Date().toISOString(),
+          // REST returns snake_case (created_at). SDK returned camelCase
+          // (createdAt). Reading both keeps this working if we ever swap
+          // back to the SDK.
+          created_at: refund?.created_at ?? refund?.createdAt ?? new Date().toISOString(),
           amount_cents: amountCents,
           reason,
           status: refund?.status ?? "PENDING",
