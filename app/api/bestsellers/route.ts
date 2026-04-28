@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { logError } from "@/lib/log-error";
+import { POS_ONLY_BUNDLE_NAMES } from "@/lib/pos-bundles";
 
 /**
  * GET /api/bestsellers?limit=10
@@ -155,15 +156,7 @@ export async function GET(req: NextRequest) {
     // Without this filter they dominate the bestseller list (they're rung
     // up more than any single product) but render as gradient placeholders
     // on the homepage because they have no images and no real catalog row.
-    const POS_ONLY_BUNDLE_NAMES = new Set([
-      "Trainer Deal",
-      "2 For 10",
-      "3 For 20",
-      "2 For 15",
-      "5 For 25",  // future-proofing common bundle SKUs
-      "Custom Amount",
-      "Tip",
-    ]);
+    // Shared with /admin/products grouping (see lib/pos-bundles.ts).
 
     const items = Array.from(agg.values())
       // Filter out POS-only bundle items by exact name match. Cheap and
