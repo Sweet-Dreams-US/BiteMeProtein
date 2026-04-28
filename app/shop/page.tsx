@@ -39,6 +39,20 @@ interface Enrichment {
   sort_order: number;
 }
 
+/**
+ * Maps the Square product name -> the legacy slug used by lib/images.ts
+ * AND product_images.slug. Single source of truth lives in lib/product-slugs.ts;
+ * we re-import it here just to look up DB photo rows by slug.
+ */
+import { slugForProductName } from "@/lib/product-slugs";
+
+interface ProductImageRow {
+  slug: string | null;
+  url: string;
+  kind: "product" | "lifestyle" | "nutrition" | string;
+  sort_order: number | null;
+}
+
 const productShowcase: Record<string, {
   photos: readonly string[];
   nutritionImage: string;
@@ -113,6 +127,10 @@ function ShopContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [enrichments, setEnrichments] = useState<Record<string, Enrichment>>({});
   const [bundleTiers, setBundleTiers] = useState<BundleTier[]>([]);
+  // DB-driven product photos, keyed by legacy slug. Populated alongside
+  // catalog/enrichments so admin uploads via /admin/products → Photos
+  // immediately appear on the storefront without redeploying lib/images.ts.
+  const [dbPhotosBySlug, setDbPhotosBySlug] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [selectedTier, setSelectedTier] = useState<BundleTier | null>(null);
   const [activeBundleIndex, setActiveBundleIndex] = useState<number | null>(null);
@@ -121,10 +139,18 @@ function ShopContent() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [catalogRes, enrichRes, tiersRes] = await Promise.all([
+    const [catalogRes, enrichRes, tiersRes, photosRes] = await Promise.all([
       fetch("/api/square/catalog"),
       supabase.from("product_enrichments").select("*"),
       supabase.from("bundle_tiers").select("*").eq("is_active", true).order("sort_order"),
+      // Pull every photo for any of our 5 known product slugs in one query.
+      // Filtering by kind="product" OR "lifestyle" matches what the hardcoded
+      // showcase already does (lib/images.X plus images.lifestyle.X) — we
+      // exclude "nutrition" since that's reserved for the nutrition modal.
+      supabase
+        .from("product_images")
+        .select("slug, url, kind, sort_order")
+        .in("kind", ["product", "lifestyle"]),
     ]);
     const catalogData = await catalogRes.json();
     if (catalogData.items) setProducts(catalogData.items);
@@ -134,8 +160,47 @@ function ShopContent() {
       setEnrichments(map);
     }
     if (tiersRes.data) setBundleTiers(tiersRes.data);
+    if (photosRes.data) {
+      // Group by slug + sort so admin uploads (URLs at /pictures/) appear
+      // FIRST as the hero photo, even though their sort_order in the table
+      // is higher than the originals — Cole's recent uploads are the better
+      // staged shots and should drive the storefront hero.
+      const grouped: Record<string, ProductImageRow[]> = {};
+      for (const row of photosRes.data as ProductImageRow[]) {
+        if (!row.slug) continue;
+        (grouped[row.slug] ??= []).push(row);
+      }
+      const result: Record<string, string[]> = {};
+      for (const [slug, rows] of Object.entries(grouped)) {
+        rows.sort((a, b) => {
+          // Prefer admin-uploaded /pictures/ URLs first
+          const aIsNew = a.url.includes("/pictures/") ? 0 : 1;
+          const bIsNew = b.url.includes("/pictures/") ? 0 : 1;
+          if (aIsNew !== bIsNew) return aIsNew - bIsNew;
+          // Then by sort_order (NULLs last)
+          const aOrder = a.sort_order ?? 999999;
+          const bOrder = b.sort_order ?? 999999;
+          return aOrder - bOrder;
+        });
+        result[slug] = rows.map((r) => r.url);
+      }
+      setDbPhotosBySlug(result);
+    }
     setLoading(false);
   }, []);
+
+  /**
+   * Hero photo for a product card on /shop.
+   * Priority: admin-uploaded DB row (sort logic above) > hardcoded fallback.
+   * The hardcoded fallback exists so a brand-new product with no DB rows
+   * still renders something sensible from lib/images.ts.
+   */
+  const heroPhotoFor = (productName: string): string => {
+    const slug = slugForProductName(productName);
+    const dbPhotos = dbPhotosBySlug[slug];
+    if (dbPhotos && dbPhotos.length > 0) return dbPhotos[0];
+    return productShowcase[productName]?.photos[0] ?? "";
+  };
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -388,7 +453,7 @@ function ShopContent() {
                           {/* Photo */}
                           <div className="md:w-2/5 relative" style={{ minHeight: "220px" }}>
                             <Image
-                              src={showcase.photos[0]}
+                              src={heroPhotoFor(product.name)}
                               alt={product.name}
                               fill
                               className="object-cover"
