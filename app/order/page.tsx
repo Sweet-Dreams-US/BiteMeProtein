@@ -83,67 +83,70 @@ export default function OrderPage() {
     );
   }
 
-  function buildMailto() {
-    const subject = encodeURIComponent(`Special Order Request from ${name}`);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
-    let body = `SPECIAL ORDER REQUEST\n`;
-    body += `========================\n\n`;
-    body += `Customer: ${name}\n`;
-    body += `Phone: ${phone}\n`;
-    body += `Email: ${email}\n\n`;
-
-    const typeLabels: Record<OrderType, string> = {
-      standard: "Standard Items",
-      bear: "Bear Size Treats",
-      cake: "Birthday Cake",
-      event: "Event / Bulk Order",
-    };
-    body += `Order Type: ${typeLabels[orderType]}\n\n`;
-
+  /**
+   * Build the structured details payload for /api/special-order. Each
+   * order type packs only the fields relevant to it. The API handler
+   * stores this as jsonb in special_orders.details, so we don't need a
+   * column-per-field schema and adding a new field doesn't need a
+   * migration — only a new key here and a new row in the admin email
+   * template.
+   */
+  function buildDetails(): Record<string, unknown> {
     if (orderType === "standard") {
-      const selected = standardItems.filter((i) => i.checked);
-      if (selected.length) {
-        body += `ITEMS:\n`;
-        selected.forEach((item) => {
-          body += `  - ${item.name}${item.variants ? ` (${item.variants})` : ""} x${item.quantity}\n`;
-        });
-        body += `\n`;
-      }
+      return {
+        items: standardItems
+          .filter((i) => i.checked)
+          .map((i) => ({ name: i.name, variants: i.variants ?? null, quantity: i.quantity })),
+      };
     }
-
     if (orderType === "bear") {
-      const selected = bearItems.filter((i) => i.checked);
-      if (selected.length) {
-        body += `BEAR SIZE ITEMS:\n`;
-        selected.forEach((item) => {
-          body += `  - ${item.name} x${item.quantity}\n`;
-        });
-        body += `\n`;
-      }
+      return {
+        items: bearItems
+          .filter((i) => i.checked)
+          .map((i) => ({ name: i.name, quantity: i.quantity })),
+      };
     }
-
     if (orderType === "cake") {
-      body += `BIRTHDAY CAKE DETAILS:\n`;
-      body += `  Flavor: ${cakeFlavor}\n`;
-      body += `  Size / Servings: ${cakeSize}\n`;
-      if (cakeInstructions) body += `  Special Instructions: ${cakeInstructions}\n`;
-      body += `\n`;
+      return {
+        flavor: cakeFlavor,
+        size: cakeSize,
+        instructions: cakeInstructions,
+      };
     }
-
-    if (orderType === "event") {
-      body += `Event / Bulk Order — details in Special Instructions below.\n\n`;
-    }
-
-    body += `Date Needed: ${dateNeeded}\n`;
-    body += `Fulfillment: ${fulfillment === "pickup" ? "Pickup" : "Delivery"}\n`;
-    if (specialInstructions) body += `\nSpecial Instructions:\n${specialInstructions}\n`;
-
-    return `mailto:haley@bitemeprotein.com?subject=${subject}&body=${encodeURIComponent(body)}`;
+    // event / catering tiers — all custom, use the notes field below.
+    return {};
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    window.location.href = buildMailto();
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/special-order", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          orderType,
+          details: buildDetails(),
+          dateNeeded: dateNeeded || undefined,
+          fulfillment,
+          notes: specialInstructions || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Couldn't submit your request.");
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Couldn't submit your request. Please try again.");
+    }
+    setSubmitting(false);
   }
 
   return (
@@ -444,12 +447,32 @@ export default function OrderPage() {
 
               {/* ----- Submit ----- */}
               <div className="pt-4">
-                <button type="submit" className="btn-primary w-full text-center text-lg py-4">
-                  Send Order Request
-                </button>
-                <p className="text-dark/40 text-xs text-center mt-3">
-                  This will open your email app with the order details. We&apos;ll respond within 24 hours.
-                </p>
+                {submitted ? (
+                  <div className="bg-green-50 border-2 border-green-300 rounded-xl p-6 text-center">
+                    <p className="text-green-700 font-bold text-lg mb-1">Request received! 🎉</p>
+                    <p className="text-green-600 text-sm">
+                      We&apos;ll get back to you at <strong>{email}</strong> within 24 hours.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="btn-primary w-full text-center text-lg py-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {submitting ? "Sending..." : "Send Order Request"}
+                    </button>
+                    {submitError && (
+                      <p className="text-red-600 text-sm text-center mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
+                        {submitError} If this keeps happening, call us at <a className="font-bold underline" href="tel:+19546044127">(954) 604-4127</a>.
+                      </p>
+                    )}
+                    <p className="text-dark/40 text-xs text-center mt-3">
+                      We&apos;ll respond within 24 hours at the email you provided.
+                    </p>
+                  </>
+                )}
               </div>
             </form>
           </ScrollReveal>

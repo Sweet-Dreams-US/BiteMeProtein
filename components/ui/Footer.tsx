@@ -1,13 +1,15 @@
 import Link from "next/link";
 
+// Same trim as Navbar — /compare hidden, /oven merged into /quiz, /catering
+// added. Keeping both /quiz and /track in the footer since they're top of
+// funnel and conversion respectively.
 const footerLinks = {
   shop: [
     { href: "/shop", label: "All Products" },
+    { href: "/catering", label: "Catering" },
     { href: "/order", label: "Special Orders" },
     { href: "/new", label: "New & Limited Edition" },
-    { href: "/compare", label: "Compare" },
-    { href: "/quiz", label: "Gym Mood Quiz" },
-    { href: "/oven", label: "The Oven" },
+    { href: "/quiz", label: "Find Your Treat" },
     { href: "/track", label: "Track Your Order" },
     { href: "/reviews", label: "Reviews" },
   ],
