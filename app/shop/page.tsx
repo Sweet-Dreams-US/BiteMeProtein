@@ -37,6 +37,8 @@ interface Enrichment {
   website_category: string | null;
   is_visible: boolean;
   sort_order: number;
+  /** When true: show a "Coming Soon" overlay and disable the buy buttons. */
+  coming_soon: boolean;
 }
 
 /**
@@ -445,10 +447,14 @@ function ShopContent() {
                   const enrichment = enrichments[product.id];
                   if (!showcase) return null;
                   const isEven = i % 2 === 0;
+                  // Coming Soon products still render — admin opted in to
+                  // showing them, just with the buy button disabled and a
+                  // visible overlay so customers know to circle back.
+                  const isComingSoon = enrichment?.coming_soon === true;
 
                   return (
                     <ScrollReveal key={product.id}>
-                      <div className={`card-bakery overflow-hidden`}>
+                      <div className={`card-bakery overflow-hidden ${isComingSoon ? "relative" : ""}`}>
                         <div className={`flex flex-col md:flex-row ${!isEven ? "md:flex-row-reverse" : ""}`}>
                           {/* Photo */}
                           <div className="md:w-2/5 relative" style={{ minHeight: "220px" }}>
@@ -456,8 +462,15 @@ function ShopContent() {
                               src={heroPhotoFor(product.name)}
                               alt={product.name}
                               fill
-                              className="object-cover"
+                              className={`object-cover ${isComingSoon ? "grayscale opacity-80" : ""}`}
                             />
+                            {isComingSoon && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-burgundy/30 backdrop-blur-[1px]">
+                                <span className="bg-burgundy text-white font-bold text-sm tracking-widest px-5 py-2.5 rounded-full uppercase shadow-lg">
+                                  Coming Soon
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Info */}
@@ -494,8 +507,18 @@ function ShopContent() {
                             </div>
 
                             <div className="flex gap-2 items-stretch">
-                              {/* Add to bundle — always shows +/count/− stepper */}
-                              {activeBundleIndex !== null && selectedTier ? (
+                              {/* Coming Soon: replace buy/bundle controls
+                                  with a disabled "Coming Soon" button so
+                                  customers can't add an unfulfillable
+                                  product to their cart. */}
+                              {isComingSoon ? (
+                                <button
+                                  disabled
+                                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-[#FFF5EE] text-[#b0a098] border border-[#e8ddd4] cursor-not-allowed"
+                                >
+                                  Coming Soon — Not Available Yet
+                                </button>
+                              ) : activeBundleIndex !== null && selectedTier ? (
                                 (() => {
                                   const v = product.variations[0];
                                   const count = v ? getProductCountInBundle(v.id) : 0;

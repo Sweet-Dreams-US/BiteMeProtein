@@ -34,6 +34,19 @@ interface Enrichment {
   is_visible: boolean;
   sort_order: number;
   cost_per_item_cents: number;
+  /**
+   * Coming Soon: show product on shop with a "Coming Soon" overlay and
+   * disable the buy button. Useful for teasing new products before
+   * Haley has stock to fulfill them.
+   */
+  coming_soon: boolean;
+  /**
+   * Manual bestseller pin: forces this product onto the homepage
+   * bestsellers list regardless of actual sales volume. Useful for
+   * launches where sales data hasn't accumulated yet, or for seasonal
+   * pushes ("we want THIS muffin in the spotlight this week").
+   */
+  is_bestseller_override: boolean;
 }
 
 interface NewProduct {
@@ -121,6 +134,7 @@ export default function AdminProducts() {
     setEditingEnrichment(existing ? { ...existing } : {
       id: "", square_catalog_id: product.id, extended_description: "", ingredients: "", nutrition_info: "",
       badges: [], website_category: null, is_visible: true, sort_order: 0, cost_per_item_cents: 0,
+      coming_soon: false, is_bestseller_override: false,
     });
   };
 
@@ -160,13 +174,17 @@ export default function AdminProducts() {
       const enrichmentPromise = (async () => {
         if (!editingEnrichment) return;
         const { id, ...rest } = editingEnrichment;
+        // Cache the Square product name on the enrichment row so the
+        // bestsellers route can render pinned products without depending
+        // on the (currently empty) square_products table.
+        const payload = { ...rest, product_name: editingProduct.name };
         if (id) {
           await supabase
             .from("product_enrichments")
-            .update({ ...rest, updated_at: new Date().toISOString() })
+            .update({ ...payload, updated_at: new Date().toISOString() })
             .eq("id", id);
         } else {
-          await supabase.from("product_enrichments").insert(rest);
+          await supabase.from("product_enrichments").insert(payload);
         }
       })();
 
@@ -500,6 +518,37 @@ export default function AdminProducts() {
                     <button onClick={() => setEditingEnrichment({ ...editingEnrichment, is_visible: !editingEnrichment.is_visible })}
                       className={`w-11 h-6 rounded-full transition-colors relative ${editingEnrichment.is_visible ? "bg-green-400" : "bg-[#e0d5cc]"}`}>
                       <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${editingEnrichment.is_visible ? "left-6" : "left-1"}`} />
+                    </button>
+                  </div>
+
+                  {/* Coming Soon — shows on shop with overlay, buy button
+                      disabled. Use for teasing products before stock is
+                      ready. Mutually exclusive with Show on Website OFF —
+                      Coming Soon implies product is still visible. */}
+                  <div className="flex items-center justify-between bg-white rounded-xl p-3 border border-[#e8ddd4]">
+                    <div>
+                      <p className="text-[#5a3e36] text-sm font-semibold">Coming Soon</p>
+                      <p className="text-[#b0a098] text-xs">Show with &ldquo;Coming Soon&rdquo; overlay; buy button disabled</p>
+                    </div>
+                    <button onClick={() => setEditingEnrichment({ ...editingEnrichment, coming_soon: !editingEnrichment.coming_soon })}
+                      className={`w-11 h-6 rounded-full transition-colors relative ${editingEnrichment.coming_soon ? "bg-orange-400" : "bg-[#e0d5cc]"}`}>
+                      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${editingEnrichment.coming_soon ? "left-6" : "left-1"}`} />
+                    </button>
+                  </div>
+
+                  {/* Bestseller pin — bypasses the sales-volume sort on
+                      /api/bestsellers and forces this product onto the
+                      homepage carousel. Multiple products can be pinned;
+                      they'll appear first (in catalog sort_order), then
+                      the sales-ranked tail fills the rest of the carousel. */}
+                  <div className="flex items-center justify-between bg-white rounded-xl p-3 border border-[#e8ddd4]">
+                    <div>
+                      <p className="text-[#5a3e36] text-sm font-semibold">Pin as Bestseller</p>
+                      <p className="text-[#b0a098] text-xs">Force onto homepage bestsellers (overrides sales ranking)</p>
+                    </div>
+                    <button onClick={() => setEditingEnrichment({ ...editingEnrichment, is_bestseller_override: !editingEnrichment.is_bestseller_override })}
+                      className={`w-11 h-6 rounded-full transition-colors relative ${editingEnrichment.is_bestseller_override ? "bg-[#E8A0BF]" : "bg-[#e0d5cc]"}`}>
+                      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${editingEnrichment.is_bestseller_override ? "left-6" : "left-1"}`} />
                     </button>
                   </div>
                 </div>

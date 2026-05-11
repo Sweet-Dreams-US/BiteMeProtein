@@ -327,57 +327,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== COMPARISON TEASER ===== */}
-      <section className="py-24 md:py-32 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <ScrollReveal>
-              <p className="stamp text-burgundy mb-6">The Difference</p>
-              <h2 className="text-section font-display text-dark mb-6">
-                Your protein bar <AnimatedSquiggly>could never.</AnimatedSquiggly>
-              </h2>
-              <p className="text-body-lg text-gray mb-8">
-                Stop settling for chalky, processed protein bars when you could be eating a brownie with 18g of protein.
-              </p>
-              <Link href="/compare" className="btn-primary">
-                See the Breakdown →
-              </Link>
-            </ScrollReveal>
-
-            <ScrollReveal delay={0.2}>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="card-bakery p-6">
-                  <p className="text-gray text-xs uppercase tracking-widest font-bold mb-4">Typical Bar</p>
-                  <div className="space-y-3">
-                    {[["Taste", 25], ["Ingredients", 33], ["Freshness", 20]].map(([label, width]) => (
-                      <div key={label as string}>
-                        <p className="text-gray text-xs mb-1">{label as string}</p>
-                        <div className="h-2.5 bg-cream rounded-full">
-                          <div className="h-full bg-gray-light/50 rounded-full" style={{ width: `${width}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="card-bakery p-6 border-2 !border-burgundy/20">
-                  <p className="text-burgundy text-xs uppercase tracking-widest font-bold mb-4">Bite Me ✨</p>
-                  <div className="space-y-3">
-                    {[["Taste", 100], ["Ingredients", 90], ["Freshness", 100]].map(([label, width]) => (
-                      <div key={label as string}>
-                        <p className="text-dark text-xs mb-1">{label as string}</p>
-                        <div className="h-2.5 bg-cream rounded-full">
-                          <div className="h-full bg-gradient-to-r from-burgundy to-salmon rounded-full" style={{ width: `${width}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
+      {/* ===== COMPARISON TEASER (hidden per Cole's request 2026-05-10)
+          Visual didn't land the way we wanted — competitor jab felt off-
+          brand. Section removed from home but /compare page is still
+          reachable by direct URL for anyone with a link. */}
 
       {/* ===== BRAND SECTION ===== */}
       <section className="py-24 md:py-32 bg-gradient-warm relative overflow-hidden">

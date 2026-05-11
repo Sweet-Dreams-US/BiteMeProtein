@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { logError } from "@/lib/log-error";
 import { POS_ONLY_BUNDLE_NAMES } from "@/lib/pos-bundles";
+import { slugForProductName } from "@/lib/product-slugs";
 
 /**
  * GET /api/bestsellers?limit=10
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
 
     const supabase = getServiceClient();
 
-    const [lineItemsRes, variationsRes, productImagesRes] = await Promise.all([
+    const [lineItemsRes, variationsRes, productImagesRes, pinnedRes] = await Promise.all([
       supabase
         .from("square_order_line_items")
         .select("name, catalog_object_id, quantity")
@@ -86,6 +87,15 @@ export async function GET(req: NextRequest) {
         .select("slug, square_product_id, url, alt, kind, sort_order")
         .eq("kind", "product")
         .order("sort_order", { ascending: true }),
+      // Pinned bestsellers — admin override. Coming-soon items are
+      // excluded since they're not buyable yet (no point teasing them in
+      // the bestseller carousel when the buy button is disabled).
+      supabase
+        .from("product_enrichments")
+        .select("square_catalog_id, product_name")
+        .eq("is_bestseller_override", true)
+        .eq("coming_soon", false)
+        .eq("is_visible", true),
     ]);
 
     if (lineItemsRes.error) {
@@ -172,7 +182,21 @@ export async function GET(req: NextRequest) {
           productId = variationToProduct.get(row.firstVariationId) ?? null;
           if (productId) image = imagesByProductId.get(productId);
         }
-        // 2. slug fuzzy match on the order line name
+        // 2. EXACT slug lookup via the known-product-name map. Critical for
+        //    disambiguating products whose names share fuzzy-matchable words:
+        //    "Raspberry Chocolate Chip Protein Banana Bread Bites" shares
+        //    "chip", "banana", "bread" with "Chocolate Chip Protein Banana
+        //    Bread Bites", so the loose fuzzy match below was returning
+        //    whichever slug happened to appear first. The exact lookup
+        //    short-circuits before fuzzy can pick the wrong one.
+        if (!image) {
+          const exactSlug = slugForProductName(row.name);
+          if (exactSlug) {
+            image = allSlugImages.find((img) => img.slug === exactSlug);
+          }
+        }
+        // 3. slug fuzzy match on the order line name (last resort for
+        //    products not in the known map — typically new/unmapped items)
         if (!image) {
           image = allSlugImages.find((img) => img.slug && slugMatchesName(row.name, img.slug));
         }
@@ -191,10 +215,57 @@ export async function GET(req: NextRequest) {
       //   2. Anything we couldn't match to product_images probably isn't a
       //      real catalog product anyway (custom POS button, voided line,
       //      etc.) — same class of noise as the bundle filter above.
-      .filter((row) => row.image_url !== null)
-      .slice(0, limit);
+      .filter((row) => row.image_url !== null);
 
-    return NextResponse.json({ items, source: "sales" });
+    // ── Admin-pinned bestsellers ───────────────────────────────────────
+    // Build cards for products that have is_bestseller_override=true.
+    // Each pinned card needs a product name + an image. We resolve the
+    // image via:
+    //   1. square_product_id → product_images (most precise)
+    //   2. exact slug from product_name → product_images (fallback)
+    // If neither resolves, drop the pin (no image = no card, same as
+    // sales-ranked items).
+    const pinned: Array<{
+      name: string;
+      total_sold: number;
+      square_product_id: string | null;
+      image_url: string | null;
+      image_alt: string | null;
+    }> = [];
+    const pinnedRows = (pinnedRes.data ?? []) as Array<{
+      square_catalog_id: string;
+      product_name: string | null;
+    }>;
+    for (const p of pinnedRows) {
+      if (!p.product_name) continue;
+      let image = imagesByProductId.get(p.square_catalog_id);
+      if (!image) {
+        const slug = slugForProductName(p.product_name);
+        if (slug) image = allSlugImages.find((img) => img.slug === slug);
+      }
+      if (!image) continue;
+      pinned.push({
+        name: p.product_name,
+        // total_sold isn't meaningful for a manual pin — use 0 so the UI
+        // can choose to hide the badge if it wants, but the value is
+        // still present for typing consistency.
+        total_sold: 0,
+        square_product_id: p.square_catalog_id,
+        image_url: image.url,
+        image_alt: image.alt ?? null,
+      });
+    }
+
+    // Merge: pinned first (in catalog order), then sales-ranked tail,
+    // deduped by name so a product that's both pinned AND a real bestseller
+    // shows once at the top.
+    const seenNames = new Set(pinned.map((p) => p.name));
+    const merged = [
+      ...pinned,
+      ...items.filter((row) => !seenNames.has(row.name)),
+    ].slice(0, limit);
+
+    return NextResponse.json({ items: merged, source: "sales" });
   } catch (err) {
     await logError(err, { path: "/api/bestsellers", source: "api-route" });
     const message = err instanceof Error ? err.message : "Failed to load bestsellers";

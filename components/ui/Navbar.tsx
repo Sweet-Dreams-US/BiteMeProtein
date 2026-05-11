@@ -7,11 +7,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import CartButton from "@/components/shop/CartButton";
 import { brand } from "@/lib/brand";
 
+// Trimmed 2026-05-10:
+//  - /compare hidden — section removed from home, page still works by URL
+//    but no nav surface so it doesn't compete with brand-positive copy.
+//  - /oven merged into /quiz — quiz page absorbs the random-treat reveal,
+//    /oven URL still 301s to /quiz so old links survive.
+//  - /catering added — new page with S/M/L tiers, "above L → /order".
 const navLinks = [
   { href: "/shop", label: "Shop" },
-  { href: "/compare", label: "Compare" },
-  { href: "/quiz", label: "Quiz" },
-  { href: "/oven", label: "The Oven" },
+  { href: "/quiz", label: "Find Your Treat" },
+  { href: "/catering", label: "Catering" },
   { href: "/about", label: "About" },
   { href: "/events", label: "Events" },
   { href: "/rewards", label: "Rewards" },
