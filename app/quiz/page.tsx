@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
+import Oven from "@/components/animations/Oven";
 
 interface Question {
   category: string;
@@ -400,6 +401,19 @@ export default function QuizPage() {
 
       <section className="min-h-[70vh] flex flex-col items-center justify-center py-8">
         <div className="max-w-2xl mx-auto px-6 w-full">
+          {/* The oven bakes alongside the quiz. Doneness scales with the
+              user's progress through the questions; on the final answer
+              we flip the state to "open" and the door swings up to reveal
+              the chosen treat. The recommendation literally comes out of
+              the oven — that's the whole show. */}
+          <div className="mb-8">
+            <Oven
+              state={showResult ? "open" : "cooking"}
+              progress={progress / 100}
+              treatEmoji={result?.emoji ?? "🍪"}
+            />
+          </div>
+
           {/* Progress Bar */}
           <div className="h-2.5 bg-cream-dark/30 rounded-full mb-10 overflow-hidden">
             <motion.div
@@ -466,19 +480,23 @@ export default function QuizPage() {
                   <div className="absolute bottom-16 left-8 w-8 h-8 bg-green/10 rounded-full animate-bounce-gentle" />
                   <div className="absolute top-1/3 left-[15%] w-6 h-6 bg-salmon/15 rounded-full animate-float" />
 
+                  {/* Title section — slimmer than before because the
+                      oven above already provided the dramatic reveal.
+                      Dropped the "Your Match" stamp since the oven's
+                      "Your treat is ready" caption + emoji float already
+                      established this is the recommendation. The title
+                      and tagline are now the answer to "what came out of
+                      the oven" — context, not climax. */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
+                    transition={{ delay: 1.2 }}
                     className="relative z-10"
                   >
-                    <span className="stamp inline-block bg-golden/20 text-golden text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-3">
-                      Your Match
-                    </span>
-                    <h2 className="font-fun text-4xl md:text-5xl text-burgundy mb-2">
+                    <h2 className="font-fun text-3xl md:text-4xl text-burgundy mb-2">
                       {result.title}
                     </h2>
-                    <p className="text-salmon text-lg font-display italic mb-6">
+                    <p className="text-salmon text-base font-display italic mb-6">
                       &ldquo;{result.tagline}&rdquo;
                     </p>
                   </motion.div>
@@ -487,7 +505,7 @@ export default function QuizPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.55 }}
+                    transition={{ delay: 1.35 }}
                     className="relative z-10 mb-8"
                   >
                     <h3 className="font-display text-lg text-burgundy mb-2 font-semibold">
@@ -502,7 +520,7 @@ export default function QuizPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.65 }}
+                    transition={{ delay: 1.5 }}
                     className="relative z-10 mb-8"
                   >
                     <div className="grid sm:grid-cols-3 gap-3 max-w-lg mx-auto">
@@ -521,7 +539,7 @@ export default function QuizPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.75 }}
+                    transition={{ delay: 1.65 }}
                     className="relative z-10 mb-8"
                   >
                     <div className="bg-burgundy/5 rounded-2xl px-6 py-4 max-w-md mx-auto border border-burgundy/10">
@@ -538,7 +556,7 @@ export default function QuizPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.85 }}
+                    transition={{ delay: 1.8 }}
                     className="flex flex-col sm:flex-row gap-4 justify-center relative z-10"
                   >
                     <Link
