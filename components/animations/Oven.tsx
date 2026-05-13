@@ -3,66 +3,66 @@
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
- * <Oven /> — animated oven that bakes alongside the user's quiz answers,
- * then opens to reveal their treat match.
+ * <Oven /> — bakery-style oven that bakes alongside the quiz answers.
  *
- * Three logical states:
- *   - "cooking"  → door closed, glowing window, steam rising. The intensity
- *                  scales with `progress` (0..1) so it visibly heats up as
- *                  the user answers more questions.
- *   - "open"     → door swings open, bright flash, treat emoji rises out
- *                  and settles above the oven.
+ * Design intent: match the original /oven page aesthetic (warm, friendly,
+ * white card with a dashed-border interior — looks like a homemade bakery
+ * sketch, not an industrial appliance). The earlier dark stone-gradient
+ * version felt off-brand for Bite Me's warm/pink palette.
  *
- * Why a separate component instead of inlining into /quiz:
- *   1. Isolates SVG/animation work from the quiz's scoring/state logic
- *      so each file stays focused.
- *   2. Lets us reuse the same oven elsewhere (homepage Easter egg, the
- *      old /oven random-reveal experience could come back later) without
- *      copy-pasting markup.
- *   3. Makes the oven testable on its own — `progress=0.5 state=cooking`
- *      should always look identical regardless of the surrounding page.
+ * Behavior is preserved from the dark version:
+ *   - cooking: 🔥 emoji pulses, steam puffs above, warm gradient inside
+ *     intensifies with `progress` (0..1)
+ *   - open:    🔥 swaps for the treat emoji which springs into place;
+ *     no complex door rotation — simpler matches the original aesthetic
  *
- * No props for the "treat name" because it'd push the type surface around
- * a single line of text; the caller composes the name beneath the oven.
+ * Why no 3D door? The original /oven design didn't have one — the magic
+ * was the "tap to open → emoji appears" beat. Restoring that simplicity
+ * keeps the visual language consistent with the rest of the site.
  */
 
 interface OvenProps {
   state: "cooking" | "open";
-  /** 0..1 — drives glow intensity + steam density while cooking. */
+  /** 0..1 — drives glow intensity, pulse speed, and steam density. */
   progress: number;
-  /** Emoji shown rising out when the door opens. */
+  /** Emoji shown after the door opens. */
   treatEmoji: string;
 }
 
 export default function Oven({ state, progress, treatEmoji }: OvenProps) {
   const isOpen = state === "open";
-  // Clamp progress so partial NaNs / overflow can't break the gradient.
+  // Clamp progress so NaN / overflow can't break gradient math.
   const p = Math.max(0, Math.min(1, progress));
-  // Glow ramps from 0.25 (cold) to 0.95 (almost done). At "open" we pin
-  // it to 1 regardless so the result reveal is visually decisive.
-  const glow = isOpen ? 1 : 0.25 + 0.7 * p;
+  // Pulse speed shrinks as the oven heats up: from a calm 2.0s at 0%
+  // down to a frantic 0.8s at 100%. When open, freeze the animation so
+  // the treat reveal isn't competing with movement underneath.
+  const pulseDuration = isOpen ? 0 : 2.0 - 1.2 * p;
 
   return (
-    <div className="relative w-full max-w-xs mx-auto">
-      {/* Steam puffs — only while cooking; density scales with progress.
-          Three offset puffs so they don't pulse in lockstep. */}
+    <div className="relative mx-auto max-w-xs">
+      {/* Steam ♨️ puffs above the oven. Density + speed scale with p so
+          the page visibly "warms up" as the user works through questions.
+          Three offset particles so they don't pulse in lockstep. */}
       <AnimatePresence>
         {!isOpen && (
           <>
-            {[0, 0.6, 1.2].map((delay, i) => (
+            {[0, 0.5, 1.0].map((delay, i) => (
               <motion.div
                 key={i}
-                className="absolute left-1/2 -translate-x-1/2 text-2xl pointer-events-none"
-                style={{ top: -10, left: `${30 + i * 20}%` }}
+                className="absolute text-2xl pointer-events-none select-none"
+                style={{
+                  top: -8,
+                  left: `${28 + i * 22}%`,
+                }}
                 initial={{ y: 0, opacity: 0 }}
                 animate={{
-                  y: [-4, -28],
-                  opacity: [0, 0.4 + p * 0.4, 0],
+                  y: [-4, -34],
+                  opacity: [0, 0.35 + p * 0.45, 0],
                 }}
                 exit={{ opacity: 0 }}
                 transition={{
                   repeat: Infinity,
-                  duration: 2.4 - p * 0.6,
+                  duration: 2.6 - p * 0.8,
                   delay,
                   ease: "easeOut",
                 }}
@@ -74,175 +74,121 @@ export default function Oven({ state, progress, treatEmoji }: OvenProps) {
         )}
       </AnimatePresence>
 
-      {/* The treat itself — rises out of the oven when the door opens.
-          Initial state is "tucked inside the oven" so the motion reads
-          as the door releasing it, not as a card teleporting in. */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            key="treat"
-            className="absolute left-1/2 -translate-x-1/2 z-20"
-            style={{ top: -56 }}
-            initial={{ y: 50, scale: 0.3, opacity: 0, rotate: -10 }}
-            animate={{ y: 0, scale: 1, opacity: 1, rotate: 0 }}
-            exit={{ y: -20, scale: 0.5, opacity: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 180,
-              damping: 14,
-              delay: 0.5, // wait for door to open before treat appears
-            }}
-          >
-            <motion.span
-              className="text-6xl drop-shadow-[0_4px_12px_rgba(132,52,48,0.35)] block"
-              animate={{ rotate: [0, -4, 4, -2, 0] }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-            >
-              {treatEmoji}
-            </motion.span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Oven body — white card with rounded corners + subtle shadow.
+          Same DNA as card-bakery elsewhere on the site so the oven feels
+          like another piece of the same bakery, not an alien widget. */}
+      <div className="bg-white rounded-3xl p-7 shadow-xl border-2 border-dark/10 relative">
+        {/* The "viewing window" — a dashed-border container that holds
+            either the 🔥 (cooking) or the treat emoji (open). Dashed
+            border evokes a sketchbook / recipe-card feel: warm and
+            handmade. */}
+        <div
+          className="rounded-2xl h-48 flex items-center justify-center border-2 border-dashed border-dark/10 relative overflow-hidden transition-colors"
+          // The interior tints warmer as p climbs. At 0 it's near-white;
+          // at 1 it's a soft amber. Inline style because Tailwind can't
+          // interpolate continuously between two tones.
+          style={{
+            background: isOpen
+              ? "linear-gradient(180deg, #FFF5EE 0%, #FFEAD9 100%)"
+              : `linear-gradient(180deg, rgba(255,245,238,${1 - p * 0.2}) 0%, rgba(255,200,140,${0.05 + p * 0.35}) 100%)`,
+          }}
+        >
+          {/* Floating glow blob behind the emoji — subtle warmth that
+              grows with progress. Hidden when open so the treat reveal
+              owns the spotlight. */}
+          {!isOpen && (
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: `radial-gradient(ellipse at 50% 65%, rgba(255,180,100,${0.15 + p * 0.45}) 0%, transparent 60%)`,
+              }}
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{
+                duration: 1.6,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          )}
 
-      {/* Oven body */}
-      <div className="bg-gradient-to-b from-stone-700 to-stone-900 rounded-2xl p-3 shadow-2xl relative overflow-hidden">
-        {/* Subtle inner glow rim — makes the oven feel "warm" even when cold */}
-        <div className="absolute inset-3 rounded-xl border border-amber-500/10" />
+          {/* The hero emoji. Pre-reveal: pulsing 🔥 that quickens with
+              progress. Post-reveal: the treat emoji, springing in with
+              a gentle wiggle.
 
-        {/* The "window" / door area. We render glow + door + open-flash
-            as siblings stacked with z-index so the door slides over the
-            glowing interior. */}
-        <div className="relative aspect-[5/4] rounded-xl overflow-hidden bg-stone-950">
-          {/* Hot interior glow — visible through the door window, then
-              fully revealed when the door opens. Gradient origin is at
-              the bottom (where the heating element would be in a real
-              oven), so the light grows upward. */}
-          <motion.div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(ellipse at 50% 110%, rgba(255,180,90,${glow}) 0%, rgba(220,80,40,${glow * 0.7}) 30%, rgba(40,10,5,0.95) 75%)`,
-            }}
-            animate={{ opacity: [0.85, 1, 0.85] }}
-            transition={{
-              duration: 1.8,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-
-          {/* Heating coil — three glowing lines at the bottom. Brightness
-              tracks the same glow value so progress = visible heat. */}
-          <div className="absolute bottom-3 left-3 right-3 space-y-1.5">
-            {[0, 1, 2].map((i) => (
+              AnimatePresence + mode="wait" makes the 🔥 fade out THEN
+              the treat fade in, so they never overlap mid-air. */}
+          <AnimatePresence mode="wait">
+            {!isOpen ? (
               <motion.div
-                key={i}
-                className="h-0.5 rounded-full"
-                style={{
-                  background: `linear-gradient(90deg, rgba(255,140,40,${glow * 0.4}), rgba(255,200,80,${glow}), rgba(255,140,40,${glow * 0.4}))`,
-                  boxShadow: `0 0 ${4 + p * 8}px rgba(255,170,60,${glow * 0.8})`,
-                }}
-                animate={{ opacity: [0.6, 1, 0.6] }}
+                key="cooking-flame"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: [1, 1.15, 1] }}
+                exit={{ opacity: 0, scale: 0.6 }}
                 transition={{
-                  duration: 1.2 + i * 0.2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
+                  scale: {
+                    repeat: Infinity,
+                    duration: pulseDuration,
+                    ease: "easeInOut",
+                  },
+                  opacity: { duration: 0.3 },
                 }}
-              />
-            ))}
-          </div>
-
-          {/* The door — covers the window during cooking, swings down/open
-              on reveal. Using rotateX from the top so it hinges like a
-              real oven door. perspective on the parent keeps the 3D
-              transform visible. */}
-          <motion.div
-            className="absolute inset-0 origin-top"
-            style={{ transformPerspective: 800 }}
-            animate={{ rotateX: isOpen ? 72 : 0 }}
-            transition={{
-              duration: 0.85,
-              ease: [0.65, 0, 0.35, 1], // weighty easing — door has mass
-            }}
-          >
-            {/* Door body: dark metal with a slight inner shadow for depth */}
-            <div className="absolute inset-0 bg-gradient-to-b from-stone-800 to-stone-900 rounded-xl">
-              {/* Window cutout: shows the interior glow while cooking.
-                  Slightly inset from the door edge so it reads as a real
-                  oven window. */}
-              <div className="absolute inset-x-4 top-3 bottom-8 rounded-lg overflow-hidden border-2 border-stone-700/80 bg-stone-950">
-                {/* Mirror the interior glow inside the window so the
-                    "we can see through the door" illusion holds. */}
-                <motion.div
-                  className="absolute inset-0"
-                  style={{
-                    background: `radial-gradient(ellipse at 50% 100%, rgba(255,180,90,${glow * 0.95}) 0%, rgba(180,60,30,${glow * 0.6}) 40%, rgba(20,8,5,0.95) 80%)`,
-                  }}
-                  animate={{ opacity: [0.7, 1, 0.7] }}
+                className="text-7xl relative z-10 drop-shadow-[0_4px_10px_rgba(220,100,40,0.25)]"
+              >
+                🔥
+              </motion.div>
+            ) : (
+              <motion.div
+                key="revealed-treat"
+                initial={{ y: 30, scale: 0.4, opacity: 0, rotate: -8 }}
+                animate={{
+                  y: 0,
+                  scale: 1,
+                  opacity: 1,
+                  rotate: 0,
+                }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 14,
+                  delay: 0.15,
+                }}
+                className="relative z-10"
+              >
+                <motion.span
+                  className="text-7xl block drop-shadow-[0_4px_12px_rgba(132,52,48,0.35)]"
+                  animate={{ rotate: [0, -4, 4, -2, 0] }}
                   transition={{
-                    duration: 1.4,
+                    duration: 1.8,
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
-                />
-                {/* Tiny pulsing dots inside the window to suggest food
-                    actively cooking — like little bubbling treats. */}
-                {[0.2, 0.5, 0.8].map((x, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute w-1.5 h-1.5 rounded-full bg-amber-300/80 blur-[1px]"
-                    style={{ left: `${x * 100}%`, bottom: "30%" }}
-                    animate={{
-                      y: [0, -4, 0],
-                      opacity: [0.4, 1, 0.4],
-                    }}
-                    transition={{
-                      duration: 1.6,
-                      repeat: Infinity,
-                      delay: i * 0.4,
-                      ease: "easeInOut",
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* Door handle — a horizontal bar near the bottom. */}
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-2 w-16 h-1.5 bg-stone-600 rounded-full shadow-inner" />
-            </div>
-          </motion.div>
-
-          {/* Light flash that bursts out the moment the door opens.
-              Short-lived white-hot bloom to make the reveal feel earned. */}
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                className="absolute inset-0 pointer-events-none"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.6, 0] }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.9, times: [0, 0.25, 1], delay: 0.3 }}
-                style={{
-                  background:
-                    "radial-gradient(ellipse at 50% 100%, rgba(255,240,200,1) 0%, rgba(255,210,140,0.6) 35%, transparent 75%)",
-                }}
-              />
+                >
+                  {treatEmoji}
+                </motion.span>
+              </motion.div>
             )}
           </AnimatePresence>
+
+          {/* "Tap to open"-style caption inside the window, but only when
+              cooking. Replaces the old caption-below-oven so the white
+              card stays focused on the emoji + reveal. */}
+          {!isOpen && (
+            <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-burgundy/40 text-[10px] font-bold uppercase tracking-widest">
+              Baking…
+            </p>
+          )}
         </div>
 
-        {/* Bottom panel with vent slits — pure cosmetic detail to sell
-            the "this is an oven, not a box" read. */}
-        <div className="mt-3 flex justify-center gap-1.5">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="w-6 h-1 rounded-full bg-stone-600/60 shadow-inner"
-            />
-          ))}
-        </div>
+        {/* Oven handle — horizontal bar at the bottom of the white card.
+            Same dark/20 tone as the original /oven design — looks like a
+            real handle without being noisy. */}
+        <div className="mt-4 mx-auto w-24 h-3 bg-dark/15 rounded-full" />
       </div>
 
-      {/* Caption that updates with cooking state. Subtle, supportive —
-          doesn't compete with the question for attention. */}
+      {/* Progress caption below the oven. Subtle, supportive — gives the
+          user a sense of how far they are without competing for attention
+          with the question card alongside this. */}
       <p className="text-center text-burgundy/60 text-xs font-bold uppercase tracking-widest mt-4">
         {isOpen ? "✨ Your treat is ready ✨" : `Baking… ${Math.round(p * 100)}%`}
       </p>
