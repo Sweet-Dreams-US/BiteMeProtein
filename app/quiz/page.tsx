@@ -12,6 +12,21 @@ interface Question {
   answers: { text: string; emoji: string; score: Record<string, number> }[];
 }
 
+/**
+ * Quiz trimmed from 8 → 4 questions on Cole's request — original survey
+ * was too long for casual web discovery (drop-off climbed after Q3 in
+ * the wireframe testing). Kept the four most differentiating categories:
+ *
+ *   Energy   — gym intensity, primary signal for brownie vs bites split
+ *   Cravings — concrete dessert preferences, hits all 4 paths cleanly
+ *   Timing   — when you snack, separates pre-workout (bread) from late-night (bites)
+ *   Texture  — direct mapping to product feel (fudgy/fluffy/creamy/chunky)
+ *
+ * Dropped Snacking, Priority, Personality, Vibe — they correlated heavily
+ * with the four above and added quiz fatigue without sharpening the score.
+ * Each remaining question still touches at least 3 product paths so the
+ * 4-question total is enough signal to disambiguate any user.
+ */
 const questions: Question[] = [
   {
     category: "Energy",
@@ -66,58 +81,6 @@ const questions: Question[] = [
     ],
   },
   {
-    category: "Snacking",
-    question: "How do you snack?",
-    answers: [
-      {
-        text: "Dense & filling — practically a meal",
-        emoji: "💪",
-        score: { brownie: 3, bread: 1 },
-      },
-      {
-        text: "Light & quick — grab and go",
-        emoji: "⚡",
-        score: { bites: 3, muffin: 1 },
-      },
-      {
-        text: "Something to share with friends",
-        emoji: "🤝",
-        score: { bites: 2, muffin: 2 },
-      },
-      {
-        text: "Pure treat mode — no guilt allowed",
-        emoji: "✨",
-        score: { brownie: 2, bites: 2 },
-      },
-    ],
-  },
-  {
-    category: "Priority",
-    question: "What's your protein priority?",
-    answers: [
-      {
-        text: "Max protein per serving",
-        emoji: "🏋️",
-        score: { brownie: 3, bread: 1 },
-      },
-      {
-        text: "Low calorie is king",
-        emoji: "📉",
-        score: { muffin: 3, bites: 1 },
-      },
-      {
-        text: "Clean ingredients matter most",
-        emoji: "🌿",
-        score: { bread: 2, muffin: 2 },
-      },
-      {
-        text: "I just want it to taste good",
-        emoji: "😋",
-        score: { bites: 3, brownie: 1 },
-      },
-    ],
-  },
-  {
     category: "Timing",
     question: "When do you usually snack?",
     answers: [
@@ -166,58 +129,6 @@ const questions: Question[] = [
         text: "Chocolate chips mixed in",
         emoji: "🍫",
         score: { bread: 3 },
-      },
-    ],
-  },
-  {
-    category: "Personality",
-    question: "Your dessert personality:",
-    answers: [
-      {
-        text: "Classic & reliable",
-        emoji: "🎯",
-        score: { muffin: 3, bread: 1 },
-      },
-      {
-        text: "Bold & adventurous",
-        emoji: "🎪",
-        score: { bites: 3, brownie: 1 },
-      },
-      {
-        text: "Fruity & fresh",
-        emoji: "🍓",
-        score: { muffin: 2, bread: 2 },
-      },
-      {
-        text: "Rich & indulgent",
-        emoji: "👑",
-        score: { brownie: 3, bites: 1 },
-      },
-    ],
-  },
-  {
-    category: "Vibe",
-    question: "How do you take your coffee?",
-    answers: [
-      {
-        text: "Black — no games",
-        emoji: "☕",
-        score: { brownie: 2, bread: 2 },
-      },
-      {
-        text: "Iced oat milk latte",
-        emoji: "🧊",
-        score: { muffin: 2, bites: 2 },
-      },
-      {
-        text: "Caramel cold brew",
-        emoji: "🤤",
-        score: { brownie: 3, bites: 1 },
-      },
-      {
-        text: "I don't do coffee",
-        emoji: "🚫",
-        score: { bread: 2, muffin: 2 },
       },
     ],
   },
