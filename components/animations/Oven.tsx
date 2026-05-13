@@ -39,10 +39,11 @@ export default function Oven({ state, progress, treatEmoji }: OvenProps) {
   const pulseDuration = isOpen ? 0 : 2.0 - 1.2 * p;
 
   return (
-    // Tighter on mobile so the quiz doesn't feel crowded — Cole's
-    // feedback. The oven is the visual cue, not the focal point; the
-    // question card needs room above the fold on small screens.
-    <div className="relative mx-auto w-[180px] sm:w-[240px]">
+    // Mobile only got smaller per Cole's feedback — desktop stays at the
+    // original /oven page's size (max-w-sm ≈ 320px). Earlier pass shrank
+    // both screens which made the oven look "unstyled" on desktop because
+    // the small card lacked visual presence against the cream background.
+    <div className="relative mx-auto w-[180px] sm:max-w-sm sm:w-full">
       {/* Steam ♨️ puffs above the oven. Density + speed scale with p so
           the page visibly "warms up" as the user works through questions.
           Three offset particles so they don't pulse in lockstep. */}
@@ -52,14 +53,14 @@ export default function Oven({ state, progress, treatEmoji }: OvenProps) {
             {[0, 0.5, 1.0].map((delay, i) => (
               <motion.div
                 key={i}
-                className="absolute text-xl sm:text-2xl pointer-events-none select-none"
+                className="absolute text-xl sm:text-3xl pointer-events-none select-none"
                 style={{
                   top: -6,
                   left: `${28 + i * 22}%`,
                 }}
                 initial={{ y: 0, opacity: 0 }}
                 animate={{
-                  y: [-4, -30],
+                  y: [-4, -34],
                   opacity: [0, 0.35 + p * 0.45, 0],
                 }}
                 exit={{ opacity: 0 }}
@@ -78,26 +79,33 @@ export default function Oven({ state, progress, treatEmoji }: OvenProps) {
       </AnimatePresence>
 
       {/* Oven body — white card with rounded corners + subtle shadow.
-          Same DNA as card-bakery elsewhere on the site so the oven feels
-          like another piece of the same bakery, not an alien widget. */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg sm:shadow-xl border-2 border-dark/10 relative">
-        {/* The "viewing window" — a dashed-border container that holds
-            either the 🔥 (cooking) or the treat emoji (open). Dashed
-            border evokes a sketchbook / recipe-card feel: warm and
-            handmade. Overflow-hidden is load-bearing for the treat
-            reveal: the treat emoji starts below the visible area and
-            rises UP into the window, so it must be clipped on entry. */}
-        <div
-          className="rounded-xl sm:rounded-2xl h-32 sm:h-40 flex items-center justify-center border-2 border-dashed border-dark/10 relative overflow-hidden transition-colors"
-          // The interior tints warmer as p climbs. At 0 it's near-white;
-          // at 1 it's a soft amber. Inline style because Tailwind can't
-          // interpolate continuously between two tones.
-          style={{
-            background: isOpen
-              ? "linear-gradient(180deg, #FFF5EE 0%, #FFEAD9 100%)"
-              : `linear-gradient(180deg, rgba(255,245,238,${1 - p * 0.2}) 0%, rgba(255,200,140,${0.05 + p * 0.35}) 100%)`,
-          }}
-        >
+          Matches the original /oven page styling that Cole referenced:
+          p-8 padding, shadow-xl, 2px dark/10 border. The hover-shadow
+          treatment isn't needed here (this oven doesn't open on click)
+          but the visual weight is the same. */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-lg sm:shadow-xl border-2 border-dark/10 relative">
+        {/* The "viewing window" / oven cavity — gray base (bg-dark/5)
+            sells "this is the inside of an oven" the way the original
+            /oven page did. The warm gradient is layered ON TOP of the
+            gray base as an absolute overlay, so the gray identity is
+            always present and the heat just glows through it.
+
+            Overflow-hidden is load-bearing for the treat reveal: the
+            treat emoji starts below the visible area and rises UP into
+            the window, so it must be clipped on entry. */}
+        <div className="rounded-xl sm:rounded-2xl h-32 sm:h-48 flex items-center justify-center border-2 border-dashed border-dark/10 relative overflow-hidden bg-dark/5">
+          {/* Warm gradient overlay — fades in with progress, blends with
+              the gray base underneath. At p=0 it's barely visible; at
+              p=1 it dominates. On open it locks to a cozy amber. */}
+          <div
+            className="absolute inset-0 pointer-events-none transition-opacity duration-700"
+            style={{
+              background: isOpen
+                ? "linear-gradient(180deg, rgba(255,245,238,0.9) 0%, rgba(255,210,150,0.95) 100%)"
+                : `linear-gradient(180deg, rgba(255,245,238,${p * 0.6}) 0%, rgba(255,200,140,${p * 0.55}) 100%)`,
+            }}
+          />
+
           {/* Floating glow blob behind the emoji — subtle warmth that
               grows with progress. Hidden when open so the treat reveal
               owns the spotlight. */}
@@ -105,7 +113,7 @@ export default function Oven({ state, progress, treatEmoji }: OvenProps) {
             <motion.div
               className="absolute inset-0 pointer-events-none"
               style={{
-                background: `radial-gradient(ellipse at 50% 65%, rgba(255,180,100,${0.15 + p * 0.45}) 0%, transparent 60%)`,
+                background: `radial-gradient(ellipse at 50% 65%, rgba(255,180,100,${0.15 + p * 0.5}) 0%, transparent 60%)`,
               }}
               animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{
@@ -190,9 +198,10 @@ export default function Oven({ state, progress, treatEmoji }: OvenProps) {
         </div>
 
         {/* Oven handle — horizontal bar at the bottom of the white card.
-            Same dark/20 tone as the original /oven design — looks like a
-            real handle without being noisy. */}
-        <div className="mt-3 sm:mt-4 mx-auto w-16 sm:w-20 h-2 sm:h-2.5 bg-dark/15 rounded-full" />
+            Matches original /oven page proportions (w-24 h-3 bg-dark/20)
+            on desktop. The thinner mobile sizing keeps it from dominating
+            on small screens. */}
+        <div className="mt-3 sm:mt-4 mx-auto w-16 sm:w-24 h-2 sm:h-3 bg-dark/15 sm:bg-dark/20 rounded-full" />
       </div>
 
       {/* Progress caption below the oven. Subtle, supportive — gives the
