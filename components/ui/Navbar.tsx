@@ -10,12 +10,15 @@ import { brand } from "@/lib/brand";
 // Trimmed 2026-05-10:
 //  - /compare hidden — section removed from home, page still works by URL
 //    but no nav surface so it doesn't compete with brand-positive copy.
-//  - /oven merged into /quiz — quiz page absorbs the random-treat reveal,
-//    /oven URL still 301s to /quiz so old links survive.
 //  - /catering added — new page with S/M/L tiers, "above L → /order".
+// Restored 2026-05-20:
+//  - /oven — the standalone tap-to-open random-treat page is back as its
+//    own thing. It still also lives inside /quiz; this nav item points at
+//    the playful standalone version.
 const navLinks = [
   { href: "/shop", label: "Shop" },
   { href: "/quiz", label: "Find Your Treat" },
+  { href: "/oven", label: "The Oven" },
   { href: "/catering", label: "Catering" },
   { href: "/about", label: "About" },
   { href: "/events", label: "Events" },
