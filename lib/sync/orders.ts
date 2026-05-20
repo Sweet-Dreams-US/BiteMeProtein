@@ -176,3 +176,41 @@ export async function syncRecentOrders(hoursBack: number): Promise<SyncResult> {
   const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
   return backfillOrders(since);
 }
+
+/**
+ * Fetch ONE order from Square by ID and upsert it.
+ *
+ * This exists because Square's `order.*` webhooks are *thin
+ * notifications*: the event payload carries only
+ * `{ order_id, location_id, state, version, created_at }` — NOT the
+ * full order with line items and money. (Contrast: `payment.*` webhooks
+ * DO include the full object.) The webhook handler extracts `order_id`
+ * and calls this to pull the complete order before upserting.
+ *
+ * Before this existed, the webhook passed the thin payload straight to
+ * `upsertOrder()`, which bails on `if (!raw?.id) return;` because the
+ * thin payload has `order_id`, not `id` — so every order webhook was
+ * silently dropped and `square_orders` only stayed current via the
+ * admin-mount backfill.
+ *
+ * Throws on fetch failure so the webhook route returns 500 and Square
+ * retries — a dropped order is worse than a retry.
+ */
+export async function syncOrderById(orderId: string): Promise<void> {
+  if (!orderId) return;
+  const client = getSquareClient();
+  const resp = await withRetry(
+    () => (client.orders as any).get({ orderId }),
+    "orders.get",
+  );
+  const order = (resp as any)?.order;
+  if (!order) {
+    await logError(`orders.get returned no order for ${orderId}`, {
+      path: "lib/sync/orders.ts:syncOrderById",
+      source: "lib",
+      context: { orderId },
+    });
+    return;
+  }
+  await upsertOrder(order);
+}

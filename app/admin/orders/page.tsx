@@ -232,13 +232,19 @@ export default function AdminOrders() {
   }, [dateFilter]);
 
   // Kick off a background sync on mount — catches any webhook-missed events.
+  // 336h = 14 days: wide enough that a webhook gap heals as soon as an
+  // admin opens this page within two weeks. The old 24h window meant any
+  // order the webhook missed was unrecoverable if nobody loaded the
+  // dashboard the next day — which is exactly how the May 2026 11-day
+  // order gap happened. The webhook itself is now fixed (it fetches the
+  // full order by id), so this is belt-and-suspenders.
   useEffect(() => {
     setLoading(true);
     fetchOrders();
     adminFetch("/api/admin/sync-recent", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ entities: ["orders", "payments", "customers"], hoursBack: 24 }),
+      body: JSON.stringify({ entities: ["orders", "payments", "customers"], hoursBack: 336 }),
     })
       .then(() => {
         setLastSyncAt(new Date().toISOString());

@@ -46,19 +46,26 @@ vi.mock("./supabase-admin", () => ({
   getAdminSupabase: () => ({ from: fromMock }),
 }));
 
+// Square client mock. ordersGet is the SDK's client.orders.get — used by
+// syncOrderById to fetch a full order. withRetry passes straight through
+// so the wrapped call still runs. paginate is unused by these tests.
+const squareMocks = vi.hoisted(() => ({
+  ordersGet: vi.fn(),
+}));
 vi.mock("./square-client", () => ({
-  getSquareClient: vi.fn(),
+  getSquareClient: () => ({ orders: { get: squareMocks.ordersGet } }),
   paginate: vi.fn(),
-  withRetry: vi.fn(),
+  withRetry: (fn: () => unknown) => fn(),
 }));
 
-import { upsertOrder } from "./orders";
+import { upsertOrder, syncOrderById } from "./orders";
 
 describe("lib/sync/orders", () => {
   beforeEach(() => {
     upsertMock.mockClear();
     deleteEqMock.mockClear();
     fromMock.mockClear();
+    squareMocks.ordersGet.mockReset();
   });
 
   it("writes the expected order row shape", async () => {
@@ -134,5 +141,55 @@ describe("lib/sync/orders", () => {
     });
     const row = upsertMock.mock.calls[0][0];
     expect(row.total_money_cents).toBeNull();
+  });
+
+  // ── syncOrderById — the webhook's order path ────────────────────────
+  // Square's order.* webhooks are thin notifications (order_id only), so
+  // the webhook handler calls syncOrderById to fetch the full order.
+  describe("syncOrderById", () => {
+    it("fetches the full order from Square and upserts it", async () => {
+      squareMocks.ordersGet.mockResolvedValue({
+        order: {
+          id: "ORD_FETCH",
+          createdAt: "2026-05-10T10:00:00Z",
+          updatedAt: "2026-05-10T10:05:00Z",
+          state: "COMPLETED",
+          totalMoney: { amount: 1500, currency: "USD" },
+          lineItems: [],
+        },
+      });
+
+      await syncOrderById("ORD_FETCH");
+
+      // Called the SDK with the right id
+      expect(squareMocks.ordersGet).toHaveBeenCalledWith({ orderId: "ORD_FETCH" });
+      // And upserted the resolved full order
+      expect(upsertMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "ORD_FETCH",
+          state: "COMPLETED",
+          total_money_cents: 1500,
+        }),
+        { onConflict: "id" },
+      );
+    });
+
+    it("no-ops on an empty orderId (never hits Square)", async () => {
+      await syncOrderById("");
+      expect(squareMocks.ordersGet).not.toHaveBeenCalled();
+      expect(upsertMock).not.toHaveBeenCalled();
+    });
+
+    it("skips the upsert when Square returns no order", async () => {
+      squareMocks.ordersGet.mockResolvedValue({ order: null });
+      await syncOrderById("ORD_GONE");
+      expect(squareMocks.ordersGet).toHaveBeenCalledWith({ orderId: "ORD_GONE" });
+      expect(upsertMock).not.toHaveBeenCalled();
+    });
+
+    it("propagates fetch failures so the webhook 500s and Square retries", async () => {
+      squareMocks.ordersGet.mockRejectedValue(new Error("Square 503"));
+      await expect(syncOrderById("ORD_FLAKY")).rejects.toThrow("Square 503");
+    });
   });
 });
