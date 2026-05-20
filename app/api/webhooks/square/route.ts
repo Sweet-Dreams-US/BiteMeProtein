@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { logError } from "@/lib/log-error";
-import { upsertOrder } from "@/lib/sync/orders";
+import { syncOrderById } from "@/lib/sync/orders";
 import { upsertPayment } from "@/lib/sync/payments";
 import { upsertRefund } from "@/lib/sync/refunds";
 import { upsertCustomer } from "@/lib/sync/customers";
@@ -79,11 +79,33 @@ export async function POST(req: NextRequest) {
     switch (type) {
       case "order.created":
       case "order.updated":
-      case "order.fulfillment.updated":
-        if (object.order_updated ?? object.order_created ?? object.order) {
-          await upsertOrder(object.order_updated ?? object.order_created ?? object.order);
+      case "order.fulfillment.updated": {
+        // Square's order.* webhooks are THIN notifications — the payload
+        // carries only { order_id, location_id, state, version,
+        // created_at }, NOT the full order with line items + money.
+        // (payment.* webhooks DO include the full object; orders are the
+        // exception.) Passing the thin payload straight to upsertOrder()
+        // silently no-ops because it keys on `order_id`, not `id`.
+        // So: extract order_id, fetch the complete order from Square.
+        const orderId =
+          object.order_created?.order_id ??
+          object.order_updated?.order_id ??
+          object.order_fulfillment_updated?.order_id ??
+          object.order?.id ??
+          object.order?.order_id ??
+          null;
+        if (orderId) {
+          await syncOrderById(orderId);
+        } else {
+          await logError("Order webhook with no resolvable order_id", {
+            path: "/api/webhooks/square",
+            source: "webhook",
+            level: "warn",
+            context: { type, eventId: event?.event_id },
+          });
         }
         break;
+      }
 
       case "payment.created":
       case "payment.updated":
