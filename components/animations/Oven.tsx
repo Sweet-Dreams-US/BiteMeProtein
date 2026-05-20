@@ -124,6 +124,33 @@ export default function Oven({ state, progress, treatEmoji }: OvenProps) {
             />
           )}
 
+          {/* The four product lines baking on a "tray" above the flame —
+              banana bread 🍌, brownie 🍫, blueberry muffin 🫐, cookie
+              dough 🍪. Each bobs on its own stagger so the row looks
+              alive, like treats rising in a real oven. Bob gets a touch
+              livelier as progress climbs (1.6s → ~1.0s). They vanish
+              when the oven opens — then the single matched treat rises
+              out instead (the AnimatePresence block below). */}
+          {!isOpen && (
+            <div className="absolute top-2.5 sm:top-4 left-0 right-0 flex justify-center gap-1.5 sm:gap-3 z-10 pointer-events-none">
+              {["🍌", "🍫", "🫐", "🍪"].map((emoji, i) => (
+                <motion.span
+                  key={emoji}
+                  className="text-base sm:text-2xl drop-shadow-[0_2px_4px_rgba(132,52,48,0.2)]"
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{
+                    duration: (1.6 - p * 0.6) + i * 0.12,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: i * 0.18,
+                  }}
+                >
+                  {emoji}
+                </motion.span>
+              ))}
+            </div>
+          )}
+
           {/* The hero emoji. Pre-reveal: pulsing 🔥 that quickens with
               progress. Post-reveal: the treat emoji rising OUT of the
               oven — starts way below the visible area (clipped by the
