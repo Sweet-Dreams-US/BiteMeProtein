@@ -187,13 +187,27 @@ export default function Oven({ state, progress, treatEmoji }: OvenProps) {
             )}
           </AnimatePresence>
 
-          {/* Subtle "Baking…" caption inside the window while cooking.
-              Sits at the bottom so it never collides with the rising
-              treat on reveal. */}
-          {!isOpen && (
+          {/* Caption inside the oven cavity. While cooking it's a faint
+              "Baking…"; once the treat has risen it becomes a brighter
+              "Baking complete 🔔" — the oven-timer ding moment. It fades
+              in a beat AFTER the treat settles (delay 0.7s, just before
+              the treat's idle wiggle at 0.8s) so the reveal reads as a
+              sequence: 🔥 fades → treat rises → "complete" lands.
+              Pinned to the bottom of the cavity so it never collides
+              with the risen treat above it. */}
+          {!isOpen ? (
             <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-burgundy/40 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">
               Baking…
             </p>
+          ) : (
+            <motion.p
+              className="absolute bottom-2 left-1/2 -translate-x-1/2 text-burgundy/70 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest whitespace-nowrap"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.4 }}
+            >
+              Baking complete 🔔
+            </motion.p>
           )}
         </div>
 
