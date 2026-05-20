@@ -10,6 +10,7 @@ const footerLinks = {
     { href: "/order", label: "Special Orders" },
     { href: "/new", label: "New & Limited Edition" },
     { href: "/quiz", label: "Find Your Treat" },
+    { href: "/oven", label: "The Oven" },
     { href: "/track", label: "Track Your Order" },
     { href: "/reviews", label: "Reviews" },
   ],
