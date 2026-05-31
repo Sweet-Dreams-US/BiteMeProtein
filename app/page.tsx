@@ -309,12 +309,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== BRAND BREAK — Girl Logo ===== */}
-      <section className="py-20 md:py-28 bg-gradient-warm relative overflow-hidden">
-        <div className="absolute top-10 right-16 w-20 h-20 rounded-full bg-salmon/15 animate-float" />
-        <div className="absolute bottom-10 left-12 w-14 h-14 rounded-full bg-golden/20 animate-float-reverse" />
+      {/* ===== BRAND MOMENT — girl icon → tagline → glow-up payoff =====
+          Previously two back-to-back <section>s with the same
+          bg-gradient-warm background. Both used Tailwind py-* padding
+          which stacked at the boundary (28 + 32 = 60 padded units of
+          dead space), making the shared background read as two visibly
+          separate panels. Merging into one <section> with a single set
+          of decorative floats removes the seam — the four content
+          blocks now read as one rising statement: icon → brand promise
+          → glow-up declaration → details. */}
+      <section className="py-24 md:py-32 bg-gradient-warm relative overflow-hidden">
+        {/* Floating decorative elements — three positions covering top,
+            middle, and bottom of the longer combined section. */}
+        <div className="absolute top-10 right-16 w-20 h-20 rounded-full bg-salmon/20 animate-float" />
+        <div className="absolute top-1/2 right-1/4 w-12 h-12 rounded-full bg-burgundy/10 animate-float-slow" />
+        <div className="absolute bottom-16 left-12 w-16 h-16 rounded-full bg-golden/30 animate-float-reverse" />
 
         <div className="relative max-w-4xl mx-auto px-6 lg:px-8 flex flex-col items-center text-center">
+          {/* Girl icon */}
           <ScrollReveal>
             <motion.div
               animate={{ y: [0, -8, 0] }}
@@ -329,9 +341,28 @@ export default function Home() {
               />
             </motion.div>
           </ScrollReveal>
+
+          {/* Brand tagline — bridge from icon to bigger glow-up payoff */}
           <ScrollReveal delay={0.1}>
-            <p className="font-fun text-burgundy text-4xl md:text-6xl">
+            <p className="font-fun text-burgundy text-4xl md:text-6xl mb-16 md:mb-24">
               Dessert... but make it protein.
+            </p>
+          </ScrollReveal>
+
+          {/* Glow-up payoff — bigger, climax of the section */}
+          <ScrollReveal delay={0.2}>
+            <h2 className="font-fun text-burgundy text-hero mb-8">
+              This isn&apos;t a protein bar.
+              <br />
+              <span className="text-salmon">It&apos;s a glow up.</span>
+            </h2>
+          </ScrollReveal>
+
+          {/* Supporting body copy */}
+          <ScrollReveal delay={0.3}>
+            <p className="text-body-lg text-dark/60 max-w-2xl mx-auto">
+              We don&apos;t do dry, chalky, or fake. Just real ingredients, high protein,
+              and desserts you actually crave. All gluten-free. All low sugar. All no nuts.
             </p>
           </ScrollReveal>
         </div>
@@ -341,30 +372,6 @@ export default function Home() {
           Visual didn't land the way we wanted — competitor jab felt off-
           brand. Section removed from home but /compare page is still
           reachable by direct URL for anyone with a link. */}
-
-      {/* ===== BRAND SECTION ===== */}
-      <section className="py-24 md:py-32 bg-gradient-warm relative overflow-hidden">
-        {/* Floating decorative elements */}
-        <div className="absolute top-10 right-10 w-20 h-20 rounded-full bg-salmon/20 animate-float" />
-        <div className="absolute bottom-20 left-10 w-16 h-16 rounded-full bg-golden/30 animate-float-reverse" />
-        <div className="absolute top-1/2 right-1/4 w-12 h-12 rounded-full bg-burgundy/10 animate-float-slow" />
-
-        <div className="relative max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <ScrollReveal>
-            <h2 className="font-fun text-burgundy text-hero mb-8">
-              This isn&apos;t a protein bar.
-              <br />
-              <span className="text-salmon">It&apos;s a glow up.</span>
-            </h2>
-          </ScrollReveal>
-          <ScrollReveal delay={0.1}>
-            <p className="text-body-lg text-dark/60 max-w-2xl mx-auto">
-              We don&apos;t do dry, chalky, or fake. Just real ingredients, high protein,
-              and desserts you actually crave. All gluten-free. All low sugar. All no nuts.
-            </p>
-          </ScrollReveal>
-        </div>
-      </section>
 
       {/* ===== LIFESTYLE PHOTO GRID =====
           Mix of fresh hero shots (AllBitesWide group shot, TeddyBearBites)
