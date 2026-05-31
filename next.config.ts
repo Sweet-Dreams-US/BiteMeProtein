@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/biteme-hero.mp4",
+        source: "/biteme-hero-v2.mp4",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
