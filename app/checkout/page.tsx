@@ -6,7 +6,7 @@ import { PaymentForm, CreditCard } from "react-square-web-payments-sdk";
 import { useCart } from "@/lib/cart";
 import Link from "next/link";
 import PickupPicker, { PickupSelection } from "@/components/checkout/PickupPicker";
-import { SHIPPING_ENABLED } from "@/lib/feature-flags";
+import { SHIPPING_ENABLED, PICKUP_ONLY_NOTE } from "@/lib/feature-flags";
 
 interface ShippingOption {
   service: string;
@@ -402,6 +402,22 @@ export default function CheckoutPage() {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Pickup-only roadmap note — appears in the spot where the
+                Delivery method toggle would've been when SHIPPING_ENABLED
+                is off, so customers see WHY there's no shipping choice
+                and what's coming. Copy is the same source as the shop
+                hero note (lib/feature-flags.ts → PICKUP_ONLY_NOTE). */}
+            {!SHIPPING_ENABLED && (
+              <div className="card-bakery p-5 md:p-6 border-l-4 border-[#E8A0BF]">
+                <p className="text-burgundy text-xs font-bold uppercase tracking-widest mb-1">
+                  🏪 {PICKUP_ONLY_NOTE.headline}
+                </p>
+                <p className="text-dark/60 text-sm">
+                  {PICKUP_ONLY_NOTE.body}
+                </p>
               </div>
             )}
 
