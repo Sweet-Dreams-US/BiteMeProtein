@@ -14,7 +14,13 @@ import { useContent } from "@/lib/content";
 import { supabase } from "@/lib/supabase";
 
 
-const HERO_VIDEO = "https://jsfxfqjikxzexokjxtby.supabase.co/storage/v1/object/public/productPhotos/hf_20260404_191224_52bb54af-2a44-49e9-8306-d6e9c97e3d1f.mp4";
+// Hero scroll-video served from /public so Vercel's edge caches it
+// immutably (see next.config.ts headers rule). Previously hosted on
+// Supabase Storage which set Cache-Control: no-cache — every visit
+// re-downloaded the full 5.6 MB and produced the scroll lag. Now it's
+// downloaded once per user then served from cache forever. If you
+// swap the file, rename it (biteme-hero-v2.mp4) so caches bust.
+const HERO_VIDEO = "/biteme-hero.mp4";
 
 interface Product {
   id: string;
