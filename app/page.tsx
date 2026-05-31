@@ -20,7 +20,7 @@ import { supabase } from "@/lib/supabase";
 // re-downloaded the full 5.6 MB and produced the scroll lag. Now it's
 // downloaded once per user then served from cache forever. If you
 // swap the file, rename it (biteme-hero-v2.mp4) so caches bust.
-const HERO_VIDEO = "/biteme-hero.mp4";
+const HERO_VIDEO = "/biteme-hero-v2.mp4";
 
 interface Product {
   id: string;
