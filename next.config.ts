@@ -18,6 +18,22 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Immutable caching for the hero scroll-video. Vercel's default for
+  // /public files is `public, max-age=0, must-revalidate` — better than
+  // Supabase's no-cache but still forces a conditional GET each visit.
+  // Pinning the video to one-year immutable means returning visitors
+  // pay zero bytes for it. If the file ever changes, rename it
+  // (biteme-hero-v2.mp4) so caches bust naturally.
+  async headers() {
+    return [
+      {
+        source: "/biteme-hero.mp4",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
