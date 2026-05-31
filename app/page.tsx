@@ -212,12 +212,16 @@ export default function Home() {
         {/* Center title — fades out as you scroll */}
         <HeroTitle />
 
-        {/* Bottom bar — brand name left, tagline right, CTAs below */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 px-6 lg:px-8 pb-14">
+        {/* Bottom bar — brand name left, tagline right, CTAs below.
+            Tightened on 2026-05-31 because the bar was getting clipped
+            against the viewport bottom on 1920×1080 laptops (wide but
+            short, after browser chrome ~900px usable). Smaller text
+            sizes, tighter row gap, more bottom clearance. */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-6 lg:px-8 pb-14 md:pb-20">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-end justify-between mb-8">
+            <div className="flex items-end justify-between mb-5 md:mb-6">
               <ScrollReveal>
-                <p className="font-fun text-white text-3xl md:text-4xl font-bold"
+                <p className="font-fun text-white text-2xl md:text-3xl font-bold"
                    style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5)" }}>
                   Bite Me Protein Bakery
                 </p>
@@ -230,11 +234,11 @@ export default function Home() {
               </ScrollReveal>
             </div>
             <ScrollReveal delay={0.2}>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/shop" className="bg-white text-burgundy px-8 py-4 rounded-full font-bold text-base hover:bg-cream hover:scale-105 transition-all shadow-lg inline-flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                <Link href="/shop" className="bg-white text-burgundy px-7 py-3 rounded-full font-bold text-base hover:bg-cream hover:scale-105 transition-all shadow-lg inline-flex items-center justify-center">
                   {ctaPrimary}
                 </Link>
-                <Link href="/quiz" className="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-base hover:bg-white hover:text-burgundy transition-all inline-flex items-center justify-center"
+                <Link href="/quiz" className="border-2 border-white text-white px-7 py-3 rounded-full font-bold text-base hover:bg-white hover:text-burgundy transition-all inline-flex items-center justify-center"
                       style={{ textShadow: "0 1px 6px rgba(0,0,0,0.3)" }}>
                   {ctaSecondary}
                 </Link>
