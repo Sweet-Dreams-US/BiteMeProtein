@@ -14,12 +14,24 @@
  *   - The Pickup / Shipping toggle on /checkout is hidden; pickup is forced.
  *   - "Ships ✓" badges on bundle cards in /shop are hidden.
  *   - Shipping address + FedEx rate fetch are skipped entirely.
+ *   - The PICKUP_ONLY_NOTE below renders on shop + checkout so customers
+ *     know local delivery and nationwide shipping are on the roadmap.
  *
- * Currently TRUE: shipping orders flow through normally; admin prints
- * the actual FedEx label from Square Dashboard (deep-link in
- * /admin/orders → Open in Square Dashboard) using all the recipient
- * info we pass through in fulfillments[].shipmentDetails. Once
- * EasyPost API access lands we'll switch to integrated label printing
- * inside our admin without flipping this flag again.
+ * Currently FALSE (2026-05-20 reversion): pulling shipping back to pickup
+ * only while we line up the local-delivery + nationwide-shipping rollout.
+ * The full pipeline (Square shipping fulfillments, EasyPost label
+ * printing, admin order view) stays intact behind the flag — flipping
+ * to TRUE re-exposes everything with no other code changes.
  */
-export const SHIPPING_ENABLED = true;
+export const SHIPPING_ENABLED = false;
+
+/**
+ * Customer-facing roadmap note shown on shop + checkout while shipping is
+ * disabled. Split into headline + body so callers can style them
+ * separately (small banner vs. inline note) without re-writing the copy.
+ * Updating either field here updates every render site.
+ */
+export const PICKUP_ONLY_NOTE = {
+  headline: "Pickup only for now",
+  body: "Local Miami metro delivery is coming soon, and nationwide shipping is on the way later this summer.",
+} as const;

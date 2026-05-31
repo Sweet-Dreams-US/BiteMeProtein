@@ -11,7 +11,7 @@ import { brand } from "@/lib/brand";
 import { supabase } from "@/lib/supabase";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
-import { SHIPPING_ENABLED } from "@/lib/feature-flags";
+import { SHIPPING_ENABLED, PICKUP_ONLY_NOTE } from "@/lib/feature-flags";
 
 interface Variation {
   id: string;
@@ -325,6 +325,26 @@ function ShopContent() {
             className="text-dark/50 text-lg max-w-md mx-auto">
             Pick a size, fill it with your favorites, and we&apos;ll bake it fresh for pickup.
           </motion.p>
+
+          {/* Roadmap note — only shows while SHIPPING_ENABLED is off so
+              customers understand pickup-only is a temporary state, not
+              forever. Copy lives in lib/feature-flags.ts so it tracks
+              the flag in one place. */}
+          {!SHIPPING_ENABLED && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.32 }}
+              className="mt-6 inline-flex flex-col items-center gap-1 max-w-lg mx-auto px-5 py-3 rounded-2xl border border-burgundy/15 bg-white/60 backdrop-blur-sm"
+            >
+              <span className="text-burgundy text-xs font-bold uppercase tracking-widest">
+                🏪 {PICKUP_ONLY_NOTE.headline}
+              </span>
+              <span className="text-dark/55 text-sm">
+                {PICKUP_ONLY_NOTE.body}
+              </span>
+            </motion.div>
+          )}
         </div>
       </section>
 
