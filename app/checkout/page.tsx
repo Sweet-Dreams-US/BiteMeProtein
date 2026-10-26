@@ -427,7 +427,7 @@ export default function CheckoutPage() {
               <div className="card-bakery p-6 md:p-8">
                 <h2 className="font-fun text-burgundy text-xl mb-4">Pickup time</h2>
                 <p className="text-dark/50 text-xs mb-4">
-                  Pick up at <strong>953 E Oakland Park Blvd, Oakland Park, FL 33334</strong>.
+                  Pickup location is sent with your confirmation email.
                   Orders are baked fresh — next-day is the default, same-day has a small rush fee if a slot&apos;s open.
                 </p>
                 <PickupPicker value={pickupSelection} onChange={setPickupSelection} />

@@ -7,20 +7,22 @@ import { motion } from "framer-motion";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
 import Marquee from "@/components/animations/Marquee";
-import ScrollVideo from "@/components/animations/ScrollVideo";
+import HeroVideo from "@/components/animations/HeroVideo";
+import DrinksMenu from "@/components/shop/DrinksMenu";
 import { images } from "@/lib/images";
 import { brand } from "@/lib/brand";
 import { useContent } from "@/lib/content";
 import { supabase } from "@/lib/supabase";
 
 
-// Hero scroll-video served from /public so Vercel's edge caches it
-// immutably (see next.config.ts headers rule). Previously hosted on
-// Supabase Storage which set Cache-Control: no-cache — every visit
-// re-downloaded the full 5.6 MB and produced the scroll lag. Now it's
-// downloaded once per user then served from cache forever. If you
-// swap the file, rename it (biteme-hero-v2.mp4) so caches bust.
-const HERO_VIDEO = "/biteme-hero-v2.mp4";
+// Hero autoplay loop served from /public with immutable caching (see
+// next.config.ts headers rule). Boomerang (forward + reversed) is baked
+// into the file so it loops seamlessly. 2.4 MB desktop / 1.1 MB phone,
+// down from the 9.4 MB scroll-scrub source. If you swap a file, rename
+// it (e.g. biteme-hero-loop-v2.mp4) so caches bust.
+const HERO_VIDEO = "/biteme-hero-loop.mp4";
+const HERO_VIDEO_MOBILE = "/biteme-hero-loop-720.mp4";
+const HERO_POSTER = "/biteme-hero-poster.jpg";
 
 interface Product {
   id: string;
@@ -203,8 +205,8 @@ export default function Home() {
 
   return (
     <>
-      {/* ===== HERO — SCROLL VIDEO ===== */}
-      <ScrollVideo src={HERO_VIDEO} className="relative" style={{ height: "300vh" }}>
+      {/* ===== HERO — AUTOPLAY LOOP VIDEO ===== */}
+      <HeroVideo src={HERO_VIDEO} mobileSrc={HERO_VIDEO_MOBILE} poster={HERO_POSTER}>
         {/* Dark gradient overlays for text readability */}
         <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none z-10" />
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/30 to-transparent pointer-events-none z-10" />
@@ -252,7 +254,7 @@ export default function Home() {
           <span className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-semibold"
                 style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>Scroll</span>
         </div>
-      </ScrollVideo>
+      </HeroVideo>
 
       {/* ===== SOCIAL PROOF MARQUEE ===== */}
       <section className="py-10 bg-burgundy overflow-hidden">
@@ -308,6 +310,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ===== SIP BAR — storefront drinks ===== */}
+      <DrinksMenu className="bg-white" />
 
       {/* ===== BRAND MOMENT — girl icon → tagline → glow-up payoff =====
           Previously two back-to-back <section>s with the same

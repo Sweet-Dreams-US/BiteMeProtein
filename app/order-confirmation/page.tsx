@@ -66,7 +66,7 @@ function ConfirmationContent() {
                   <span className="text-xl">🏪</span>
                   <div>
                     <p className="text-dark font-bold text-sm">Pickup at the bakery</p>
-                    <p className="text-dark/50 text-xs">953 E Oakland Park Blvd, Oakland Park, FL 33334. When you arrive, call (954) 604-4127 and we&apos;ll bring your order out.</p>
+                    <p className="text-dark/50 text-xs">Pickup location is in your confirmation email. When you arrive, call (954) 604-4127 and we&apos;ll bring your order out.</p>
                   </div>
                 </div>
               )}
