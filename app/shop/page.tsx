@@ -11,6 +11,7 @@ import { brand } from "@/lib/brand";
 import { supabase } from "@/lib/supabase";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
+import DrinksMenu from "@/components/shop/DrinksMenu";
 import { SHIPPING_ENABLED, PICKUP_ONLY_NOTE } from "@/lib/feature-flags";
 
 interface Variation {
@@ -506,7 +507,7 @@ function ShopContent() {
                             </p>
 
                             <div className="flex flex-wrap gap-1.5 mb-4">
-                              {(enrichment?.ingredients || "Gluten-free · Low sugar · No nuts · Kosher certified").split("·").map((d) => (
+                              {(enrichment?.ingredients || "Gluten-free · Low sugar · No nuts").split("·").map((d) => (
                                 <span key={d.trim()} className="bg-cream-dark/40 text-dark/50 text-xs font-semibold px-3 py-1 rounded-full">{d.trim()}</span>
                               ))}
                               {enrichment?.nutrition_info && (
@@ -642,6 +643,9 @@ function ShopContent() {
               </div>
             </section>
           )}
+
+          {/* ===== SIP BAR — storefront drinks ===== */}
+          <DrinksMenu className="bg-white" />
 
           {/* ===== MERCH — COMING SOON ===== */}
           <section className="py-20 bg-gradient-warm">

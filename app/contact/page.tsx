@@ -71,10 +71,10 @@ export default function ContactPage() {
           <ScrollReveal>
             <div className="card-bakery p-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
               <div className="flex-1">
-                <span className="text-3xl mb-3 block">📍</span>
-                <h3 className="font-fun text-burgundy text-2xl mb-2">Our Kitchen</h3>
-                <p className="text-dark/60 mb-1">953 E Oakland Park Blvd, Oakland Park, FL 33334</p>
-                <p className="text-dark/40 text-sm">Commercial kitchen — all treats baked fresh</p>
+                <span className="text-3xl mb-3 block">🎉</span>
+                <h3 className="font-fun text-burgundy text-2xl mb-2">Grand Opening — Coming Soon</h3>
+                <p className="text-dark/60 mb-1">Our storefront is almost ready. Location and opening date drop soon — follow <a href="https://instagram.com/biteme_protein" target="_blank" rel="noopener noreferrer" className="text-burgundy font-semibold">@biteme_protein</a> to be first to know.</p>
+                <p className="text-dark/40 text-sm">All treats baked fresh</p>
               </div>
               <Image src={brand.squareLogo} alt="Bite Me" width={80} height={80} className="rounded-2xl" />
             </div>

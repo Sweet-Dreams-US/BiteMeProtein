@@ -298,7 +298,7 @@ function TrackPageContent() {
               {order.fulfillmentType === "PICKUP" && (
                 <div className="bg-golden-light/20 rounded-xl p-4 text-sm">
                   <p className="font-bold text-burgundy mb-1">🏪 Pickup order</p>
-                  <p className="text-dark/60">953 E Oakland Park Blvd, Oakland Park, FL 33334</p>
+                  <p className="text-dark/60">Pickup location is in your confirmation email.</p>
                 </div>
               )}
 
