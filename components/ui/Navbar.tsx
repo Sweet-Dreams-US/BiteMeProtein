@@ -15,7 +15,7 @@ import { brand } from "@/lib/brand";
 //  - /oven — the standalone tap-to-open random-treat page is back as its
 //    own thing. It still also lives inside /quiz; this nav item points at
 //    the playful standalone version.
-const navLinks = [
+const baseNavLinks = [
   { href: "/shop", label: "Shop" },
   { href: "/quiz", label: "Find Your Treat" },
   { href: "/oven", label: "The Oven" },
@@ -27,7 +27,17 @@ const navLinks = [
   { href: "/contact", label: "Contact" },
 ];
 
-export default function Navbar() {
+// Blog sits just before Contact, and only appears once a post has released.
+const blogLink = { href: "/blog", label: "Blog" };
+
+export default function Navbar({ showBlog = false }: { showBlog?: boolean }) {
+  const navLinks = showBlog
+    ? [...baseNavLinks.slice(0, -1), blogLink, ...baseNavLinks.slice(-1)]
+    : baseNavLinks;
+  // Ten links do not fit in the row between 1024px and 1279px (Order Now gets
+  // pushed off screen), so once Blog is in the nav the menu button stays until xl.
+  const showRowFrom = showBlog ? "hidden xl:flex" : "hidden lg:flex";
+  const hideMenuFrom = showBlog ? "xl:hidden" : "lg:hidden";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -65,7 +75,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-7">
+          <div className={`${showRowFrom} items-center gap-7`}>
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -86,7 +96,7 @@ export default function Navbar() {
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden text-dark p-2"
+              className={`${hideMenuFrom} text-dark p-2`}
               aria-label="Toggle menu"
             >
               <div className="w-6 flex flex-col gap-1.5">
@@ -115,7 +125,7 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-white border-t border-burgundy/10 overflow-hidden"
+            className={`${hideMenuFrom} bg-white border-t border-burgundy/10 overflow-hidden`}
           >
             <div className="px-6 py-8 flex flex-col gap-5">
               {navLinks.map((link) => (

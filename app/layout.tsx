@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { CartProvider } from "@/lib/cart";
+import { hasReleasedPosts } from "@/lib/blog";
 import CartDrawer from "@/components/shop/CartDrawer";
 import "./globals.css";
 
@@ -30,6 +31,10 @@ const anton = Anton({
   subsets: ["latin"],
   weight: ["400"],
 });
+
+// The nav shows a Blog link only once a post has released. Pages are rebuilt
+// at most once an hour, so the link appears (or goes away) without a deploy.
+export const revalidate = 3600;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() || "https://bitemeprotein.com";
 
@@ -60,11 +65,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const showBlog = await hasReleasedPosts();
+
   return (
     <html
       lang="en"
@@ -72,9 +79,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-cream text-dark">
         <CartProvider>
-          <Navbar />
+          <Navbar showBlog={showBlog} />
           <main className="flex-1 pt-20">{children}</main>
-          <Footer />
+          <Footer showBlog={showBlog} />
           <CartDrawer />
         </CartProvider>
         <Analytics />

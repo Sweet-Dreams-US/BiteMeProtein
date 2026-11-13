@@ -24,7 +24,12 @@ const footerLinks = {
   ],
 };
 
-export default function Footer() {
+export default function Footer({ showBlog = false }: { showBlog?: boolean }) {
+  // Blog sits just before Contact Us, and only appears once a post has released.
+  const companyLinks = showBlog
+    ? [...footerLinks.company.slice(0, -1), { href: "/blog", label: "Blog" }, ...footerLinks.company.slice(-1)]
+    : footerLinks.company;
+
   return (
     <footer className="bg-dark text-cream/80">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
@@ -56,7 +61,7 @@ export default function Footer() {
           <div>
             <h4 className="text-cream text-xs uppercase tracking-widest font-bold mb-4">Company</h4>
             <ul className="flex flex-col gap-3">
-              {footerLinks.company.map((link) => (
+              {companyLinks.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-cream/50 hover:text-salmon transition-colors text-sm">
                     {link.label}

@@ -1,9 +1,14 @@
 import type { MetadataRoute } from "next";
+import { getReleasedPosts } from "@/lib/blog";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() || "https://bitemeprotein.com";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// Rebuilt at most once an hour so blog posts join the sitemap on their release date.
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const posts = await getReleasedPosts();
 
   // Public, indexable routes only. Admin + API + auth-gated routes are
   // excluded via robots.ts disallow rules; listing them here would be
@@ -25,10 +30,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/careers", priority: 0.3, changeFrequency: "monthly" },
   ];
 
-  return routes.map(({ path, priority, changeFrequency }) => ({
+  const pages = routes.map(({ path, priority, changeFrequency }) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,
     changeFrequency,
     priority,
   }));
+
+  // Blog pages are listed only for posts that have reached their release date.
+  const blog: MetadataRoute.Sitemap = posts.length
+    ? [
+        {
+          url: `${SITE_URL}/blog`,
+          lastModified: new Date(`${posts[0].release_on}T12:00:00Z`),
+          changeFrequency: "monthly",
+          priority: 0.6,
+        },
+        ...posts.map((post) => ({
+          url: `${SITE_URL}/blog/${post.slug}`,
+          lastModified: new Date(`${post.release_on}T12:00:00Z`),
+          changeFrequency: "yearly" as const,
+          priority: 0.5,
+        })),
+      ]
+    : [];
+
+  return [...pages, ...blog];
 }
