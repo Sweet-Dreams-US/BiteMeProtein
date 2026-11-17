@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { logError } from "@/lib/log-error";
+import { priceCart, cartToText, money } from "@/lib/thanksgiving";
 
 /**
  * POST /api/special-order
@@ -23,7 +24,7 @@ interface SpecialOrderBody {
   name: string;
   phone: string;
   email: string;
-  orderType: "standard" | "bear" | "cake" | "event" | "catering-small" | "catering-medium" | "catering-large";
+  orderType: "standard" | "bear" | "cake" | "event" | "catering-small" | "catering-medium" | "catering-large" | "thanksgiving";
   details?: Record<string, unknown>;
   dateNeeded?: string;
   fulfillment?: "pickup" | "delivery";
@@ -38,7 +39,11 @@ function getServiceClient() {
   );
 }
 
-function adminEmailHtml(body: SpecialOrderBody, requestId: string): string {
+function adminEmailHtml(
+  body: SpecialOrderBody,
+  requestId: string,
+  emailDetails: Record<string, unknown> = body.details ?? {},
+): string {
   const escape = (s: string) => s.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] || c));
   const typeLabels: Record<SpecialOrderBody["orderType"], string> = {
     standard: "Standard Items",
@@ -48,10 +53,11 @@ function adminEmailHtml(body: SpecialOrderBody, requestId: string): string {
     "catering-small": "Catering — Small",
     "catering-medium": "Catering — Medium",
     "catering-large": "Catering — Large",
+    thanksgiving: "🦃 Thanksgiving Pre-Order",
   };
-  const detailLines = Object.entries(body.details ?? {})
+  const detailLines = Object.entries(emailDetails)
     .filter(([, v]) => v !== null && v !== undefined && v !== "")
-    .map(([k, v]) => `<tr><td style="padding:6px 12px;color:#7a6a62;font-size:12px;">${escape(k)}</td><td style="padding:6px 12px;color:#5a3e36;font-size:13px;">${escape(typeof v === "string" ? v : JSON.stringify(v))}</td></tr>`)
+    .map(([k, v]) => `<tr><td style="padding:6px 12px;color:#7a6a62;font-size:12px;">${escape(k)}</td><td style="padding:6px 12px;color:#5a3e36;font-size:13px;white-space:pre-wrap;">${escape(typeof v === "string" ? v : JSON.stringify(v))}</td></tr>`)
     .join("");
 
   return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#FFF9F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
@@ -91,6 +97,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 
+    // Thanksgiving pre-orders: re-price the cart from lib/thanksgiving.ts so
+    // the stored total never depends on a number sent from the browser, and
+    // swap the raw cart for a readable summary the bakery can act on.
+    let details: Record<string, unknown> = body.details ?? {};
+    let emailDetails: Record<string, unknown> | undefined;
+    let dateNeeded: string | undefined = body.dateNeeded;
+    if (body.orderType === "thanksgiving") {
+      const priced = priceCart(body.details?.cart);
+      if (!priced.ok) {
+        return NextResponse.json({ error: priced.error }, { status: 400 });
+      }
+      const pickup = typeof body.details?.pickup === "string" ? body.details.pickup.trim().slice(0, 200) : "";
+      const total = money(priced.cart.total);
+      details = { cart: priced.cart.lines, total: priced.cart.total, pickup };
+      emailDetails = {
+        Order: cartToText(priced.cart),
+        Total: `${total} (not charged online — confirm with customer)`,
+        "Pickup preference": pickup || "—",
+      };
+      dateNeeded = undefined; // pickup is free text / a window label, not a date
+    }
+
     const supabase = getServiceClient();
     const { data: inserted, error: insertErr } = await supabase
       .from("special_orders")
@@ -99,8 +127,8 @@ export async function POST(req: NextRequest) {
         phone: body.phone.trim(),
         email: body.email.trim().toLowerCase(),
         order_type: body.orderType,
-        details: body.details ?? {},
-        date_needed: body.dateNeeded || null,
+        details,
+        date_needed: dateNeeded || null,
         fulfillment: body.fulfillment || null,
         notes: body.notes || null,
       })
@@ -130,8 +158,11 @@ export async function POST(req: NextRequest) {
           from: `Bite Me <${fromEmail}>`,
           to: [adminEmail],
           reply_to: body.email,
-          subject: `🎂 Special order: ${body.name} — ${body.orderType}`,
-          html: adminEmailHtml(body, inserted.id),
+          subject:
+            body.orderType === "thanksgiving"
+              ? `🦃 Thanksgiving preorder: ${body.name} — ${money((details.total as number) ?? 0)}`
+              : `🎂 Special order: ${body.name} — ${body.orderType}`,
+          html: adminEmailHtml(body, inserted.id, emailDetails),
         }),
       }).then(async (res) => {
         if (!res.ok) {
