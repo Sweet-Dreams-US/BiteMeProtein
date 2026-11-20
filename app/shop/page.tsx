@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
 import DrinksMenu from "@/components/shop/DrinksMenu";
+import ThanksgivingBanner from "@/components/thanksgiving/ThanksgivingBanner";
 import { SHIPPING_ENABLED, PICKUP_ONLY_NOTE } from "@/lib/feature-flags";
 
 interface Variation {
@@ -348,6 +349,9 @@ function ShopContent() {
           )}
         </div>
       </section>
+
+      {/* Thanksgiving preorder promo — remove after the season */}
+      <ThanksgivingBanner />
 
       {loading ? (
         <section className="py-20 flex justify-center">

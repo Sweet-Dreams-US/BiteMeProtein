@@ -20,6 +20,13 @@
   --color-gray: #70706e;
   --color-gray-light: #9a9a98;
 
+  /* Bite Me hot-pink — matches the printed menus (Thanksgiving page) */
+  --color-bitepink: #E62A8B;
+  --color-bitepink-dark: #C61C74;
+  --color-bitepink-light: #FFB8D2;
+  --color-bitepink-pale: #FDE9F1;
+  --color-bitepink-blush: #FFF6F9;
+
   /* Surfaces */
   --color-cream: #FFF9F0;
   --color-cream-dark: #F5EDE0;
@@ -281,4 +288,24 @@ html {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Pink polka-dot rule, like the dotted border on the printed menus */
+.dots-pink {
+  height: 14px;
+  background-image: radial-gradient(circle, var(--color-bitepink) 38%, transparent 40%);
+  background-size: 26px 14px;
+  background-repeat: repeat-x;
+  background-position: center;
+}
+
+/* Gentle falling leaves for the Thanksgiving hero */
+@keyframes leaf-fall {
+  0% { transform: translate3d(0, -10%, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate3d(40px, 110vh, 0) rotate(360deg); opacity: 0; }
+}
+.animate-leaf-fall { animation: leaf-fall 12s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-leaf-fall { animation: none; opacity: 0.6; }
 }

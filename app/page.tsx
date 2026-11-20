@@ -9,6 +9,7 @@ import AnimatedSquiggly from "@/components/animations/AnimatedSquiggly";
 import Marquee from "@/components/animations/Marquee";
 import HeroVideo from "@/components/animations/HeroVideo";
 import DrinksMenu from "@/components/shop/DrinksMenu";
+import ThanksgivingBanner from "@/components/thanksgiving/ThanksgivingBanner";
 import { images } from "@/lib/images";
 import { brand } from "@/lib/brand";
 import { useContent } from "@/lib/content";
@@ -255,6 +256,9 @@ export default function Home() {
                 style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>Scroll</span>
         </div>
       </HeroVideo>
+
+      {/* ===== THANKSGIVING PREORDER PROMO — remove after the season ===== */}
+      <ThanksgivingBanner />
 
       {/* ===== SOCIAL PROOF MARQUEE ===== */}
       <section className="py-10 bg-burgundy overflow-hidden">
