@@ -18,13 +18,16 @@
 // of inventing a date, and the form falls back to a free-text pickup box.
 export const THANKSGIVING_INFO = {
   /** Display string, e.g. "Sunday, Nov 22 at 8 PM". null = not announced yet. */
-  preorderDeadline: null as string | null,
+  preorderDeadline: "Sunday, Nov 22" as string | null,
   /**
    * Pickup windows customers can choose from, e.g.
    * ["Tue, Nov 24 · 10 AM – 4 PM", "Wed, Nov 25 · 10 AM – 4 PM"].
    * Empty = customers type a preferred day/time and we confirm by text.
    */
-  pickupWindows: [] as string[],
+  pickupWindows: [
+    "Wednesday, Nov 25",
+    "Thursday, Nov 26 · pickup until 12 PM",
+  ] as string[],
   /** Thanksgiving Day, shown in the hero. */
   holidayLabel: "Thursday, Nov 26",
 };
