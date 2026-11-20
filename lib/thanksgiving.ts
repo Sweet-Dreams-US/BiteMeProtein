@@ -25,7 +25,7 @@ export const THANKSGIVING_INFO = {
    * Empty = customers type a preferred day/time and we confirm by text.
    */
   pickupWindows: [
-    "Wednesday, Nov 25",
+    "Wednesday, Nov 25 · 8 AM – 8 PM",
     "Thursday, Nov 26 · pickup until 12 PM",
   ] as string[],
   /** Thanksgiving Day, shown in the hero. */
